@@ -141,6 +141,8 @@ export default function LandingPage({
     username: "",
     password: "",
   });
+  const [products, setProducts] = useState([]); // State to store all product specifications
+  const [currentProduct, setCurrentProduct] = useState(null); // State to store the currently displayed product
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -192,6 +194,23 @@ export default function LandingPage({
   // Spec Tab State
   const [activeSpecTab, setActiveSpecTab] = useState("dimensions");
   const [showBackToTop, setShowBackToTop] = useState(false);
+
+  // Fetch all product details on component mount
+  useEffect(() => {
+    const fetchAllProducts = async () => {
+      try {
+        const response = await api.get("/products");
+        setProducts(response.data);
+        if (response.data.length > 0) {
+          setCurrentProduct(response.data[0]); // Set the first product as the current one for display
+        }
+      } catch (error) {
+        console.error("Error fetching product specifications:", error);
+        showNotification("Failed to load product details.", "error");
+      }
+    };
+    fetchAllProducts();
+  }, []);
 
   // Tracking Scroll để làm hiệu ứng Điện thoại 3D lướt lên & nghiêng góc
   const heroRef = useRef(null);
@@ -280,8 +299,12 @@ export default function LandingPage({
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
   const handleAddToCart = () => {
-    setCartCount((prev) => prev + 1);
-    setIsCartOpen(true);
+    if (currentProduct) {
+      setCartCount((prev) => prev + 1);
+      setIsCartOpen(true);
+    } else {
+      showNotification("Product details not loaded yet. Please try again.", "error");
+    }
   };
 
 
@@ -588,15 +611,17 @@ export default function LandingPage({
               className="relative w-[190px] sm:w-[220px] md:w-[240px] h-[380px] sm:h-[430px] md:h-[480px] rounded-[36px] sm:rounded-[48px] shadow-[0_0_0_1px_rgba(255,255,255,0.35),0_24px_70px_rgba(16,185,129,0.22),0_10px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 border border-white/20 bg-white/80 backdrop-blur-sm"
             >
               {/* CHỖ THAY ẢNH ĐIỆN THOẠI CHÍNH (HERO 3D SCROLL IMAGE) */}
-              <img
-                src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1400&auto=format&fit=crop"
-                alt="Cinematic Ultra Premium Smartphone Hardware Device"
-                width="240"
-                height="480"
-                decoding="async"
-                fetchPriority="high"
-                className="w-full h-full object-cover rounded-[36px] sm:rounded-[48px] bg-black brightness-95 contrast-125 saturate-90"
-              />
+              {currentProduct && (
+                <img
+                  src={currentProduct.imageUrl || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1400&auto=format&fit=crop"}
+                  alt={currentProduct.productName || "Cinematic Ultra Premium Smartphone Hardware Device"}
+                  width="240"
+                  height="480"
+                  decoding="async"
+                  fetchPriority="high"
+                  className="w-full h-full object-cover rounded-[36px] sm:rounded-[48px] bg-black brightness-95 contrast-125 saturate-90"
+                />
+              )}
               {/* Glow Overlay Ambient Reflection Effect */}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_44%,rgba(16,185,129,0.34),transparent_28%),radial-gradient(circle_at_60%_58%,rgba(34,197,94,0.22),transparent_20%),radial-gradient(circle_at_40%_28%,rgba(255,255,255,0.06),transparent_18%),linear-gradient(145deg,rgba(255,255,255,0.04),transparent_42%)] pointer-events-none rounded-[36px] sm:rounded-[48px]" />
             </motion.div>
@@ -824,50 +849,50 @@ export default function LandingPage({
               transition={{ duration: 0.28, ease: "easeOut" }}
               className="space-y-4 text-sm font-sans"
             >
-              {activeSpecTab === "dimensions" && (
+            {currentProduct && activeSpecTab === "dimensions" && (
                 <>
                   <div className="flex justify-between py-2 border-b border-slate-500/10">
                     <span>Height</span>
-                    <span className="font-semibold">146.7 mm</span>
+                    <span className="font-semibold">{currentProduct.heightMm} mm</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-slate-500/10">
                     <span>Width</span>
-                    <span className="font-semibold">71.5 mm</span>
+                    <span className="font-semibold">{currentProduct.widthMm} mm</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-slate-500/10">
                     <span>Depth</span>
-                    <span className="font-semibold">7.4 mm</span>
+                    <span className="font-semibold">{currentProduct.depthMm} mm</span>
                   </div>
                 </>
               )}
-              {activeSpecTab === "connectivity" && (
+              {currentProduct && activeSpecTab === "connectivity" && (
                 <>
                   <div className="flex justify-between py-2 border-b border-slate-500/10">
                     <span>Wireless Network</span>
                     <span className="font-semibold">
-                      Wi-Fi 6E / 5G Ultra-wideband
+                      {currentProduct.wirelessNetwork}
                     </span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-slate-500/10">
                     <span>Protocols</span>
                     <span className="font-semibold">
-                      gRPC, WebSockets STOMP
+                      {currentProduct.protocols}
                     </span>
                   </div>
                 </>
               )}
-              {activeSpecTab === "processing" && (
+              {currentProduct && activeSpecTab === "processing" && (
                 <>
                   <div className="flex justify-between py-2 border-b border-slate-500/10">
                     <span>Chipset Architecture</span>
                     <span className="font-semibold">
-                      Epoch v4 Neural Engine
+                      {currentProduct.chipsetArch}
                     </span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-slate-500/10">
                     <span>Cores Matrix</span>
                     <span className="font-semibold">
-                      16-Core Cluster Module
+                      {currentProduct.coresMatrix}
                     </span>
                   </div>
                 </>
@@ -878,15 +903,17 @@ export default function LandingPage({
           {/* Right Showcase Box */}
           <div className="relative w-full h-[350px] rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(6,11,14,0.92),rgba(7,18,14,0.84))] flex items-center justify-center">
             {/* CHỖ THAY ẢNH CHI TIẾT SẢN PHẨM HOẶC GÓC NGHIÊNG KHÁC (SPEC SHOWCASE IMAGE) */}
-            <img
-              src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=900&auto=format&fit=crop"
-              alt="Specifications Texture Close Up"
-              width="900"
-              height="350"
-              loading="lazy"
-              decoding="async"
-              className="w-full h-full object-cover opacity-100 hover:scale-[1.02] transition-transform duration-500"
-            />
+            {currentProduct && (
+              <img
+                src={currentProduct.imageUrl || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=900&auto=format&fit=crop"}
+                alt={currentProduct.productName || "Specifications Texture Close Up"}
+                width="900"
+                height="350"
+                loading="lazy"
+                decoding="async"
+                className="w-full h-full object-cover opacity-100 hover:scale-[1.02] transition-transform duration-500"
+              />
+            )}
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.22),transparent_30%),radial-gradient(circle_at_70%_80%,rgba(34,197,94,0.16),transparent_28%),linear-gradient(180deg,rgba(0,0,0,0.05),rgba(0,0,0,0.25))] pointer-events-none" />
             <div className="absolute bottom-4 left-4 flex items-center gap-2 text-[10px] uppercase font-bold text-emerald-200/90">
               <ShieldCheck className="w-3 h-3" /> Secure Enclave Certified
@@ -936,6 +963,27 @@ export default function LandingPage({
                 )}
               >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <div>
+                    <label className="text-[11px] font-bold uppercase tracking-[0.22em] opacity-60 block mb-3">
+                      Choose Product
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {products.map((product) => (
+                        <button
+                          key={product.productId}
+                          onClick={() => setCurrentProduct(product)}
+                          className={twMerge(
+                            "cursor-pointer text-xs px-4 py-2 rounded-full border transition-all duration-300 font-medium",
+                            currentProduct?.productId === product.productId
+                              ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
+                              : "border-slate-500/20 hover:border-slate-500/40",
+                          )}
+                        >
+                          {product.productName}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div>
                     <label className="text-[11px] font-bold uppercase tracking-[0.22em] opacity-60 block mb-3">
                       Choose Finish
@@ -998,6 +1046,10 @@ export default function LandingPage({
                     )}
                   >
                     Selected:{" "}
+                    <span className="font-semibold text-emerald-400">
+                      {currentProduct?.productName || "N/A"}
+                    </span>{" "}
+                    /{" "}
                     <span className="font-semibold text-emerald-400">
                       {selectedColor}
                     </span>{" "}
@@ -1344,7 +1396,7 @@ export default function LandingPage({
                   </button>
                 </div>
 
-                {cartCount > 0 ? (
+                {cartCount > 0 && currentProduct ? (
                   <div className="space-y-4">
                     <div
                       className={twMerge(
@@ -1356,13 +1408,13 @@ export default function LandingPage({
                     >
                       <div>
                         <h4 className="font-semibold text-sm">
-                          Epoch Smart Hub Node
+                          {currentProduct.productName}
                         </h4>
                         <p className="text-[11px] opacity-60 mt-1">
                           Config: {selectedColor} / {selectedSize}
                         </p>
                         <span className="text-xs font-semibold text-blue-500 block mt-2">
-                          $299.00
+                          ${currentProduct.price}.00
                         </span>
                       </div>
                       <div className="flex items-center gap-2 border border-slate-500/20 rounded-lg px-2 py-1 bg-white/5">
@@ -1396,7 +1448,7 @@ export default function LandingPage({
               <div className="border-t border-slate-500/10 pt-4">
                 <div className="flex justify-between items-center text-sm font-semibold mb-4">
                   <span>Subtotal Architecture Cost</span>
-                  <span>${cartCount * 299}.00</span>
+                  <span>${currentProduct ? cartCount * currentProduct.price : 0}.00</span>
                 </div>
                 <button
                   onClick={() =>
