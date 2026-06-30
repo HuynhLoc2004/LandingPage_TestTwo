@@ -127,10 +127,12 @@ export default function LandingPage({
   isLoggedIn,
   onLoginSuccess,
   onLogout,
+  setIsLoading, // Receive setIsLoading prop
 }) {
   // States quản lý tính năng nâng cao
   const [darkMode, setDarkMode] = useState(true);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [authMode, setAuthMode] = useState("login");
@@ -142,6 +144,7 @@ export default function LandingPage({
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setIsLoading(true); // Set loading to true
     try {
       const response = await api.post("/users/login", loginForm);
       localStorage.setItem("accessToken", response.data.accessToken);
@@ -151,11 +154,14 @@ export default function LandingPage({
     } catch (error) {
       console.error("Login failed:", error);
       showNotification(error.response?.data?.message || "Login failed!", "error");
+    } finally {
+      setIsLoading(false); // Set loading to false
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setIsLoading(true); // Set loading to true
     try {
       await api.post("/users/register", loginForm);
       showNotification("Registration successful! Please log in.", "success");
@@ -163,6 +169,8 @@ export default function LandingPage({
     } catch (error) {
       console.error("Registration failed:", error);
       showNotification(error.response?.data?.message || "Registration failed!", "error");
+    } finally {
+      setIsLoading(false); // Set loading to false
     }
   };
 
@@ -386,6 +394,14 @@ export default function LandingPage({
               )}
             </button>
 
+            {/* Favorites Trigger */}
+            <button
+              onClick={() => setIsFavoritesOpen(true)}
+              className="relative p-2 rounded-full hover:bg-slate-500/10 transition-colors cursor-pointer"
+            >
+              <Heart className="w-4 h-4" />
+            </button>
+
             {/* Shopping Cart Trigger */}
             <button
               onClick={() => setIsCartOpen(true)}
@@ -458,9 +474,60 @@ export default function LandingPage({
               loop
               muted
               playsInline
-              className="w-full h-full object-cover scale-105"
+        className="w-full h-full object-cover scale-105"
             />
           </div>
+
+      {/* FAVORITES SIDEBAR */}
+      <AnimatePresence>
+        {isFavoritesOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            onClick={() => setIsFavoritesOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {isFavoritesOpen && (
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: "0%" }}
+            exit={{ x: "100%" }}
+            transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
+            className={twMerge(
+              "fixed top-0 right-0 h-full w-full max-w-md z-50 flex flex-col shadow-2xl",
+              darkMode
+                ? "bg-slate-900/95 border-l border-slate-800"
+                : "bg-white/95 border-l border-slate-200",
+            )}
+          >
+            <div className="flex items-center justify-between p-6 border-b border-slate-500/10">
+              <h2 className="font-display text-2xl font-semibold">
+                Favorites
+              </h2>
+              <button
+                onClick={() => setIsFavoritesOpen(false)}
+                className="p-2 rounded-full hover:bg-slate-500/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 p-6 overflow-y-auto">
+              {/* Placeholder for favorite items */}
+              <div className="flex flex-col items-center justify-center h-full text-center">
+                <Heart className="w-12 h-12 mb-4 text-slate-500" />
+                <h3 className="font-semibold text-lg">No favorites yet</h3>
+                <p className="text-sm text-slate-400 mt-1">
+                  Your favorite items will appear here.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
           {/* Left Text Box */}
           <div className="relative z-20 flex-1 flex flex-col items-start max-w-xl">
