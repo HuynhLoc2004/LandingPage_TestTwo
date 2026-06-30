@@ -1,0 +1,63 @@
+.notification-bar {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 320px;
+    padding: 16px;
+    color: white;
+    z-index: 9999;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+    transform-origin: right center;
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+    overflow: hidden;
+}
+
+.notification-bar--success {
+    background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.notification-bar--error {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.notification-bar--info {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.notification-bar.slide-in {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+}
+
+.notification-bar.slide-out {
+    transform: translateX(120%) scale(0.9);
+    opacity: 0;
+}
+
+.notification-icon {
+    flex-shrink: 0;
+}
+
+.notification-message {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.notification-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.4);
+    animation: progress-bar linear forwards;
+}
+
+@keyframes progress-bar {
+    from { width: 100%; }
+    to { width: 0%; }
+}

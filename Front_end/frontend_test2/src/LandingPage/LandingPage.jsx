@@ -24,6 +24,7 @@ import {
   MessageSquare,
   ArrowUp,
   LogIn,
+  LogOut, // Added LogOut icon
   User,
   Lock,
   Eye,
@@ -31,6 +32,7 @@ import {
   Heart,
 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
+import api from "../api/axios"; // Import the configured axios instance
 
 // --- DATA: LOGO MARQUEE ---
 const FacebookIcon = ({ className = "" }) => (
@@ -120,7 +122,12 @@ const LOGOS = [
   },
 ];
 
-export default function LandingPage() {
+export default function LandingPage({
+  showNotification,
+  isLoggedIn,
+  onLoginSuccess,
+  onLogout,
+}) {
   // States quản lý tính năng nâng cao
   const [darkMode, setDarkMode] = useState(true);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -132,6 +139,37 @@ export default function LandingPage() {
     username: "",
     password: "",
   });
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await api.post("/users/login", loginForm);
+      localStorage.setItem("accessToken", response.data.accessToken);
+      onLoginSuccess();
+      setIsLoginOpen(false);
+      showNotification("Login successful!", "success");
+    } catch (error) {
+      console.error("Login failed:", error);
+      showNotification(error.response?.data?.message || "Login failed!", "error");
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post("/users/register", loginForm);
+      showNotification("Registration successful! Please log in.", "success");
+      setAuthMode("login");
+    } catch (error) {
+      console.error("Registration failed:", error);
+      showNotification(error.response?.data?.message || "Registration failed!", "error");
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setLoginForm((prev) => ({ ...prev, [name]: value }));
+  };
 
   // States cấu hình sản phẩm (E-commerce Mini)
   const [selectedColor, setSelectedColor] = useState("Onyx Black");
@@ -237,6 +275,7 @@ export default function LandingPage() {
     setCartCount((prev) => prev + 1);
     setIsCartOpen(true);
   };
+
 
   return (
     <div
@@ -366,8 +405,12 @@ export default function LandingPage() {
 
             <button
               onClick={() => {
-                setAuthMode("login");
-                setIsLoginOpen(true);
+                if (isLoggedIn) {
+                  onLogout();
+                } else {
+                  setAuthMode("login");
+                  setIsLoginOpen(true);
+                }
               }}
               className={twMerge(
                 "cursor-pointer inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-full transition-all border",
@@ -376,8 +419,17 @@ export default function LandingPage() {
                   : "bg-slate-900 text-white border-slate-900 hover:bg-slate-800",
               )}
             >
-              <LogIn className="w-4 h-4" />
-              Đăng nhập
+              {isLoggedIn ? (
+                <>
+                  <LogOut className="w-4 h-4" />
+                  Đăng xuất
+                </>
+              ) : (
+                <>
+                  <LogIn className="w-4 h-4" />
+                  Đăng nhập
+                </>
+              )}
             </button>
           </div>
         </nav>
@@ -1074,17 +1126,7 @@ export default function LandingPage() {
 
               <form
                 className="mt-6 space-y-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  alert(
-                    authMode === "login"
-                      ? "Đăng nhập thành công!"
-                      : "Đăng kí thành công!",
-                  );
-                  setIsLoginOpen(false);
-                  setShowPassword(false);
-                  setAuthMode("login");
-                }}
+                onSubmit={authMode === "login" ? handleLogin : handleRegister}
               >
                 <label className="block">
                   <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.22em] opacity-60">
@@ -1106,10 +1148,10 @@ export default function LandingPage() {
                       onChange={(e) =>
                         setLoginForm((prev) => ({
                           ...prev,
-                          username: e.target.value,
+                          username: e.target.value.replace(/\s/g, ''),
                         }))
                       }
-                      placeholder="Nhập tài khoản"
+                      placeholder="Nhập tài khoản (không khoảng trắng)"
                       className="w-full bg-transparent text-sm outline-none placeholder:text-slate-500"
                     />
                   </div>
@@ -1138,7 +1180,7 @@ export default function LandingPage() {
                           password: e.target.value,
                         }))
                       }
-                      placeholder="Nhập mật khẩu"
+                      placeholder="Tối thiểu 6 ký tự, hoa, thường, số, đặc biệt"
                       className="w-full bg-transparent text-sm outline-none placeholder:text-slate-500"
                     />
                     <button
