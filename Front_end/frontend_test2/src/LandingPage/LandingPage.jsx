@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import api from "../api/axios"; // Import the configured axios instance
+import FavoriteProducts from "../components/FavoriteProducts"; // Import FavoriteProducts component
 
 // --- DATA: LOGO MARQUEE ---
 const FacebookIcon = ({ className = "" }) => (
@@ -127,7 +128,10 @@ export default function LandingPage({
   isLoggedIn,
   onLoginSuccess,
   onLogout,
-  setIsLoading, // Receive setIsLoading prop
+  setIsLoading,
+  favorites,
+  setFavorites,
+  fetchFavorites,
 }) {
   // States quản lý tính năng nâng cao
   const [darkMode, setDarkMode] = useState(true);
@@ -148,7 +152,7 @@ export default function LandingPage({
     e.preventDefault();
     setIsLoading(true); // Set loading to true
     try {
-      const response = await api.post("/users/login", loginForm);
+      const response = await api.post("/auth/login", loginForm);
       localStorage.setItem("accessToken", response.data.accessToken);
       onLoginSuccess();
       setIsLoginOpen(false);
@@ -165,7 +169,7 @@ export default function LandingPage({
     e.preventDefault();
     setIsLoading(true); // Set loading to true
     try {
-      await api.post("/users/register", loginForm);
+      await api.post("/auth/register", loginForm);
       showNotification("Registration successful! Please log in.", "success");
       setAuthMode("login");
     } catch (error) {
@@ -307,6 +311,48 @@ export default function LandingPage({
     }
   };
 
+  const toggleFavorite = async (productId) => {
+    if (!isLoggedIn) {
+      showNotification("Please log in to add favorites.", "info");
+      return;
+    }
+
+    // Save previous state for rollback
+    const previousFavorites = [...favorites];
+
+    // Optimistic Update
+    const isFav = favorites.some((p) => p.productId === productId);
+    if (isFav) {
+      // Optimistically remove from favorites state
+      setFavorites(favorites.filter((p) => p.productId !== productId));
+      // Show notification immediately
+      showNotification("Removed from favorites", "info");
+    } else {
+      // Optimistically add to favorites state
+      const productToAdd = products.find((p) => p.productId === productId);
+      if (productToAdd) {
+        setFavorites([...favorites, productToAdd]);
+      }
+      // Show notification immediately
+      showNotification("Added to favorites", "success");
+    }
+
+    try {
+      if (isFav) {
+        await api.post(`/favorites/remove?productId=${productId}`);
+      } else {
+        await api.post(`/favorites/add?productId=${productId}`);
+      }
+      // Re-fetch favorites in background to sync state with server
+      fetchFavorites();
+    } catch (error) {
+      console.error("Favorite toggle failed:", error);
+      showNotification("Failed to update favorites.", "error");
+      // Rollback to previous state on failure
+      setFavorites(previousFavorites);
+    }
+  };
+
 
   return (
     <div
@@ -422,7 +468,12 @@ export default function LandingPage({
               onClick={() => setIsFavoritesOpen(true)}
               className="relative p-2 rounded-full hover:bg-slate-500/10 transition-colors cursor-pointer"
             >
-              <Heart className="w-4 h-4" />
+              <Heart className={twMerge("w-4 h-4", favorites.length > 0 && "fill-current text-rose-500")} />
+              {favorites.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {favorites.length}
+                </span>
+              )}
             </button>
 
             {/* Shopping Cart Trigger */}
@@ -520,34 +571,13 @@ export default function LandingPage({
             animate={{ x: "0%" }}
             exit={{ x: "100%" }}
             transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
-            className={twMerge(
-              "fixed top-0 right-0 h-full w-full max-w-md z-50 flex flex-col shadow-2xl",
-              darkMode
-                ? "bg-slate-900/95 border-l border-slate-800"
-                : "bg-white/95 border-l border-slate-200",
-            )}
           >
-            <div className="flex items-center justify-between p-6 border-b border-slate-500/10">
-              <h2 className="font-display text-2xl font-semibold">
-                Favorites
-              </h2>
-              <button
-                onClick={() => setIsFavoritesOpen(false)}
-                className="p-2 rounded-full hover:bg-slate-500/10 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="flex-1 p-6 overflow-y-auto">
-              {/* Placeholder for favorite items */}
-              <div className="flex flex-col items-center justify-center h-full text-center">
-                <Heart className="w-12 h-12 mb-4 text-slate-500" />
-                <h3 className="font-semibold text-lg">No favorites yet</h3>
-                <p className="text-sm text-slate-400 mt-1">
-                  Your favorite items will appear here.
-                </p>
-              </div>
-            </div>
+            <FavoriteProducts
+              favorites={favorites}
+              toggleFavorite={toggleFavorite}
+              darkMode={darkMode}
+              onClose={() => setIsFavoritesOpen(false)}
+            />
           </motion.div>
         )}
       </AnimatePresence>
@@ -801,24 +831,26 @@ export default function LandingPage({
 
             <button
               type="button"
-              onClick={() => setIsFavorite((prev) => !prev)}
+              onClick={() => currentProduct && toggleFavorite(currentProduct.productId)}
               className={twMerge(
                 "mb-6 cursor-pointer inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-all active:scale-[0.99]",
-                isFavorite
+                currentProduct && favorites.some((p) => p.productId === currentProduct.productId)
                   ? "border-rose-500 bg-rose-500/10 text-rose-500"
                   : darkMode
                     ? "border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
               )}
               aria-label={
-                isFavorite ? "Remove from favorites" : "Add to favorites"
+                currentProduct && favorites.some((p) => p.productId === currentProduct.productId)
+                  ? "Remove from favorites"
+                  : "Add to favorites"
               }
-              title={isFavorite ? "Liked" : "Add to favorites"}
+              title={currentProduct && favorites.some((p) => p.productId === currentProduct.productId) ? "Liked" : "Add to favorites"}
             >
               <Heart
-                className={twMerge("w-4 h-4", isFavorite && "fill-current")}
+                className={twMerge("w-4 h-4", currentProduct && favorites.some((p) => p.productId === currentProduct.productId) && "fill-current")}
               />
-              {isFavorite ? "Liked" : "Favorite"}
+              {currentProduct && favorites.some((p) => p.productId === currentProduct.productId) ? "Liked" : "Favorite"}
             </button>
 
             {/* Tab Controls */}
@@ -962,26 +994,30 @@ export default function LandingPage({
                     : "bg-white/85 border-slate-200/60 shadow-sm",
                 )}
               >
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="text-[11px] font-bold uppercase tracking-[0.22em] opacity-60 block mb-3">
                       Choose Product
                     </label>
                     <div className="flex flex-wrap gap-2">
-                      {products.map((product) => (
-                        <button
-                          key={product.productId}
-                          onClick={() => setCurrentProduct(product)}
-                          className={twMerge(
-                            "cursor-pointer text-xs px-4 py-2 rounded-full border transition-all duration-300 font-medium",
-                            currentProduct?.productId === product.productId
-                              ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
-                              : "border-slate-500/20 hover:border-slate-500/40",
-                          )}
-                        >
-                          {product.productName}
-                        </button>
-                      ))}
+                      {Array.isArray(products) && products.length > 0 ? (
+                        products.map((product) => (
+                          <button
+                            key={product.productId}
+                            onClick={() => setCurrentProduct(product)}
+                            className={twMerge(
+                              "cursor-pointer text-xs px-4 py-2 rounded-full border transition-all duration-300 font-medium",
+                              currentProduct?.productId === product.productId
+                                ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
+                                : "border-slate-500/20 hover:border-slate-500/40",
+                            )}
+                          >
+                            {product.productName}
+                          </button>
+                        ))
+                      ) : (
+                        <p className="text-sm text-slate-500">No products available.</p>
+                      )}
                     </div>
                   </div>
                   <div>
