@@ -776,21 +776,22 @@ export default function LandingPage({
             >
               {/* CHỖ THAY ẢNH ĐIỆN THOẠI CHÍNH (HERO 3D SCROLL IMAGE) */}
               {currentProduct && (
-                <img
-                  src={
-                    currentProduct.imageUrl ||
-                    "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1400&auto=format&fit=crop"
-                  }
-                  alt={
-                    currentProduct.productName ||
-                    "Cinematic Ultra Premium Smartphone Hardware Device"
-                  }
-                  width="240"
-                  height="480"
-                  decoding="async"
-                  fetchPriority="high"
-                  className="w-full h-full object-cover rounded-[36px] sm:rounded-[48px] bg-black brightness-95 contrast-125 saturate-90"
-                />
+              <img
+                src={
+                  currentProduct.imageUrl ||
+                  "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1400&auto=format&fit=crop"
+                }
+                alt={
+                  currentProduct.productName ||
+                  "Cinematic Ultra Premium Smartphone Hardware Device"
+                }
+                width="240"
+                height="480"
+                loading="lazy"
+                decoding="async"
+                fetchPriority="high"
+                className="w-full h-full object-cover rounded-[36px] sm:rounded-[48px] bg-black brightness-95 contrast-125 saturate-90"
+              />
               )}
               {/* Glow Overlay Ambient Reflection Effect */}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_44%,rgba(16,185,129,0.34),transparent_28%),radial-gradient(circle_at_60%_58%,rgba(34,197,94,0.22),transparent_20%),radial-gradient(circle_at_40%_28%,rgba(255,255,255,0.06),transparent_18%),linear-gradient(145deg,rgba(255,255,255,0.04),transparent_42%)] pointer-events-none rounded-[36px] sm:rounded-[48px]" />
@@ -1117,6 +1118,7 @@ export default function LandingPage({
                 height="350"
                 loading="lazy"
                 decoding="async"
+                fetchPriority="low"
                 className="w-full h-full object-cover opacity-100 hover:scale-[1.02] transition-transform duration-500"
               />
             )}
