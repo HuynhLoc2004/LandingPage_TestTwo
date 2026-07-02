@@ -15,9 +15,9 @@ function AppContent() {
     const navigate = useNavigate();
     const refreshTokenTimeoutRef = React.useRef(null);
 
-    const showNotification = (message, type, duration = 5000) => {
+    const showNotification = useCallback((message, type, duration = 5000) => {
         setNotification({ message, type, duration });
-    };
+    }, []);
 
     const fetchFavorites = useCallback(async () => {
         if (!isLoggedIn) return;
@@ -48,11 +48,9 @@ function AppContent() {
             }
             navigate("/");
         }
-    }, [navigate, showNotification, setIsLoading, setFavorites]); // Add dependencies
+    }, [navigate, showNotification, setIsLoading, setFavorites]);
 
-    useEffect(() => {
-        fetchFavorites();
-    }, [fetchFavorites]);
+    const setupRefreshTokenTimerRef = React.useRef();
 
     const setupRefreshTokenTimer = useCallback(() => {
         const accessToken = localStorage.getItem("accessToken");
@@ -77,7 +75,7 @@ function AppContent() {
                         try {
                             const response = await api.post("/auth/refresh-token", {}, { withCredentials: true });
                             localStorage.setItem("accessToken", response.data.accessToken);
-                            setupRefreshTokenTimer(); // Reset timer with new token
+                            setupRefreshTokenTimerRef.current(); // Call via ref
                         } catch (error) {
                             console.error("Failed to refresh token:", error);
                             // If refresh fails, force logout
@@ -90,7 +88,7 @@ function AppContent() {
                         try {
                             const response = await api.post("/auth/refresh-token", {}, { withCredentials: true });
                             localStorage.setItem("accessToken", response.data.accessToken);
-                            setupRefreshTokenTimer(); // Reset timer with new token
+                            setupRefreshTokenTimerRef.current(); // Call via ref
                         } catch (error) {
                             console.error("Failed to refresh token:", error);
                             handleLogout();
@@ -105,22 +103,32 @@ function AppContent() {
                 handleLogout();
             }
         }
-    }, [handleLogout]); // Add handleLogout as a dependency
+    }, [handleLogout]);
 
     useEffect(() => {
-        setupRefreshTokenTimer();
+        setupRefreshTokenTimerRef.current = setupRefreshTokenTimer;
+    }, [setupRefreshTokenTimer]);
+
+    useEffect(() => {
+        if (isLoggedIn) { // Only fetch if logged in
+            fetchFavorites();
+        }
+    }, [fetchFavorites, isLoggedIn]);
+
+    useEffect(() => {
+        setupRefreshTokenTimerRef.current(); // Initial call via ref
         return () => {
             if (refreshTokenTimeoutRef.current) {
                 clearTimeout(refreshTokenTimeoutRef.current);
             }
         };
-    }, [setupRefreshTokenTimer]);
+    }, []); // Empty dependency array for the effect that calls the ref
 
     const handleLoginSuccess = () => {
         setIsLoggedIn(true);
         showNotification("Login successful!", "success");
         fetchFavorites();
-        setupRefreshTokenTimer(); // Start refresh timer on successful login
+        setupRefreshTokenTimerRef.current(); // Start refresh timer on successful login
     };
 
     return (

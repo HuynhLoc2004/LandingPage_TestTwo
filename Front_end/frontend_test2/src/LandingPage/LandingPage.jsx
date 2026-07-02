@@ -1,4 +1,10 @@
-import { useState, useRef, useEffect } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   motion,
   useScroll,
@@ -474,10 +480,12 @@ export default function LandingPage({
     }
   };
 
-  const cartSubtotal = cartItems.reduce(
-    (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
-    0,
-  );
+  const cartSubtotal = useMemo(() => {
+    return cartItems.reduce(
+      (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+      0,
+    );
+  }, [cartItems]);
 
   return (
     <div
@@ -1140,20 +1148,22 @@ export default function LandingPage({
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {Array.isArray(products) && products.length > 0 ? (
-                        products.map((product) => (
-                          <button
-                            key={product.productId}
-                            onClick={() => setCurrentProduct(product)}
-                            className={twMerge(
-                              "cursor-pointer text-xs px-4 py-2 rounded-full border transition-all duration-300 font-medium",
-                              currentProduct?.productId === product.productId
-                                ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
-                                : "border-slate-500/20 hover:border-slate-500/40",
-                            )}
-                          >
-                            {product.productName}
-                          </button>
-                        ))
+                        useMemo(() => {
+                          return products.map((product) => (
+                            <button
+                              key={product.productId}
+                              onClick={() => setCurrentProduct(product)}
+                              className={twMerge(
+                                "cursor-pointer text-xs px-4 py-2 rounded-full border transition-all duration-300 font-medium",
+                                currentProduct?.productId === product.productId
+                                  ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
+                                  : "border-slate-500/20 hover:border-slate-500/40",
+                              )}
+                            >
+                              {product.productName}
+                            </button>
+                          ));
+                        }, [products, currentProduct, darkMode])
                       ) : (
                         <p className="text-sm text-slate-500">
                           No products available.
