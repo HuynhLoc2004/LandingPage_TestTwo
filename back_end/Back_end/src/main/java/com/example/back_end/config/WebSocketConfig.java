@@ -1,22 +1,33 @@
 package com.example.back_end.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.scheduling.TaskScheduler;
+import org.springframework.web.socket.server.HandshakeInterceptor;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    private static final String PRODUCTION_FRONTEND_ORIGIN =
+            "https://landing-page-test-two-git-main-huynhtanloc.vercel.app";
+
     @Value("${FRONTEND_URL:http://localhost:5173}")
-    private String frontendUrl;
+    private String frontendUrls;
 
     @Bean
     @Primary
@@ -37,18 +48,61 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         config.setApplicationDestinationPrefixes("/app");
     }
 
+    @Bean
+    public HandshakeInterceptor webSocketHandshakeLoggingInterceptor() {
+        return new HandshakeInterceptor() {
+            @Override
+            public boolean beforeHandshake(
+                    ServerHttpRequest request,
+                    org.springframework.http.server.ServerHttpResponse response,
+                    WebSocketHandler wsHandler,
+                    Map<String, Object> attributes
+            ) {
+                System.out.println("[WS HANDSHAKE] endpoint=" + request.getURI()
+                        + ", origin=" + request.getHeaders().getOrigin());
+                return true;
+            }
+
+            @Override
+            public void afterHandshake(
+                    ServerHttpRequest request,
+                    org.springframework.http.server.ServerHttpResponse response,
+                    WebSocketHandler wsHandler,
+                    Exception exception
+            ) {
+                if (exception != null) {
+                    System.out.println("[WS ERROR] endpoint=" + request.getURI()
+                            + ", origin=" + request.getHeaders().getOrigin()
+                            + ", message=" + exception.getMessage());
+                }
+            }
+        };
+    }
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns(
-                        frontendUrl,
-                        "http://localhost:5173",
-                        "http://localhost:5174",
-                        "http://127.0.0.1:5173",
-                        "http://127.0.0.1:5174",
-                        "http://localhost:*",
-                        "http://127.0.0.1:*"
-                )
+                .addInterceptors(webSocketHandshakeLoggingInterceptor())
+                .setAllowedOriginPatterns(allowedOriginPatterns())
                 .withSockJS();
+    }
+
+    private String[] allowedOriginPatterns() {
+        List<String> origins = new ArrayList<>(Arrays.asList(frontendUrls.split(",")));
+        origins.add(PRODUCTION_FRONTEND_ORIGIN);
+        origins.add("https://*.vercel.app");
+        origins.add("http://localhost:5173");
+        origins.add("http://localhost:5174");
+        origins.add("http://127.0.0.1:5173");
+        origins.add("http://127.0.0.1:5174");
+        origins.add("http://localhost:*");
+        origins.add("http://127.0.0.1:*");
+        origins.add("*");
+
+        return origins.stream()
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .distinct()
+                .toArray(String[]::new);
     }
 }

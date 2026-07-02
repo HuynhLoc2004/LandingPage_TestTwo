@@ -4,12 +4,15 @@ import com.example.back_end.dto.request.UserLoginRequest;
 import com.example.back_end.dto.request.UserRegisterRequest;
 import com.example.back_end.dto.response.AuthResponse;
 import com.example.back_end.service.UserService;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/auth")
@@ -28,13 +31,7 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@RequestBody UserLoginRequest request, HttpServletResponse response) {
         AuthResponse authResponse = userService.loginUser(request);
 
-        // Set refresh token in a secure, HTTP-only cookie
-        Cookie refreshTokenCookie = new Cookie("auth_token", authResponse.getRefreshToken());
-        refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(true); // Only send over HTTPS
-        refreshTokenCookie.setPath("/"); // Accessible from all paths
-        refreshTokenCookie.setMaxAge((int) (userService.getRefreshTokenExpirationMillis() / 1000)); // Max age in seconds
-        response.addCookie(refreshTokenCookie);
+        addRefreshTokenCookie(response, authResponse.getRefreshToken());
 
         return ResponseEntity.ok(authResponse);
     }
@@ -45,13 +42,7 @@ public class AuthController {
             userService.logoutUser(refreshToken);
         }
 
-        // Invalidate the refresh token cookie
-        Cookie refreshTokenCookie = new Cookie("auth_token", null);
-        refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(true);
-        refreshTokenCookie.setPath("/");
-        refreshTokenCookie.setMaxAge(0); // Set max age to 0 to delete the cookie
-        response.addCookie(refreshTokenCookie);
+        clearRefreshTokenCookie(response);
 
         return ResponseEntity.ok().build();
     }
@@ -63,14 +54,32 @@ public class AuthController {
         }
         AuthResponse authResponse = userService.refreshToken(refreshToken);
 
-        // Update refresh token in cookie
-        Cookie refreshTokenCookie = new Cookie("auth_token", authResponse.getRefreshToken());
-        refreshTokenCookie.setHttpOnly(true);
-        refreshTokenCookie.setSecure(true);
-        refreshTokenCookie.setPath("/");
-        refreshTokenCookie.setMaxAge((int) (userService.getRefreshTokenExpirationMillis() / 1000));
-        response.addCookie(refreshTokenCookie);
+        addRefreshTokenCookie(response, authResponse.getRefreshToken());
 
         return ResponseEntity.ok(authResponse);
+    }
+
+    private void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
+        ResponseCookie cookie = ResponseCookie.from("auth_token", refreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(Duration.ofMillis(userService.getRefreshTokenExpirationMillis()))
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    }
+
+    private void clearRefreshTokenCookie(HttpServletResponse response) {
+        ResponseCookie cookie = ResponseCookie.from("auth_token", "")
+                .httpOnly(true)
+                .secure(true)
+                .sameSite("None")
+                .path("/")
+                .maxAge(Duration.ZERO)
+                .build();
+
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }

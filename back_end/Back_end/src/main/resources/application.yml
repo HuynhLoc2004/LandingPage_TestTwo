@@ -37,6 +37,7 @@ spring:
           writetimeout: 5000
 server:
   port: 8080
+  forward-headers-strategy: FRAMEWORK
 jwt:
   secretKey: ${JWT_SECRET_KEY}
   accessTokenExpiration: ${JWT_ACCESS_TOKEN_EXPIRATION}

@@ -1,6 +1,7 @@
 package com.example.back_end.config;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -9,35 +10,45 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
-import java.util.Arrays;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import com.example.back_end.repository.UserRepository;
-import com.example.back_end.config.JwtAuthenticationFilter;
-import org.springframework.beans.factory.annotation.Value;
-import lombok.RequiredArgsConstructor; // Add this import
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor // Use RequiredArgsConstructor
+@RequiredArgsConstructor
 public class SecurityConfig {
 
+    private static final String PRODUCTION_FRONTEND_ORIGIN =
+            "https://landing-page-test-two-git-main-huynhtanloc.vercel.app";
+    private static final String LOCAL_FRONTEND_ORIGIN = "http://localhost:5173";
+
     private final UserRepository userRepository;
-    // Remove JwtAuthenticationFilter from constructor injection
 
     @Value("${FRONTEND_URL:https://landing-page-test-two-git-main-huynhtanloc.vercel.app}")
-    private String frontendUrl;
+    private String frontendUrls;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception { // Inject JwtAuthenticationFilter here
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            RequestLoggingFilter requestLoggingFilter,
+            CorsConfigurationSource corsConfigurationSource
+    ) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
@@ -48,33 +59,40 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/auth/**", "/products/**", "/ws/**", "/api/subscribe/**").permitAll()
+                        .requestMatchers(
+                                "/auth/**",
+                                "/products/**",
+                                "/ws",
+                                "/ws/**",
+                                "/ws/info/**",
+                                "/api/subscribe/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(corsFilter(), JwtAuthenticationFilter.class); // Add CorsFilter before JwtAuthenticationFilter
+                .addFilterBefore(requestLoggingFilter, JwtAuthenticationFilter.class)
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
 
     @Bean
-    public CorsFilter corsFilter() {
+    public CorsConfigurationSource corsConfigurationSource() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.setAllowedOriginPatterns(Arrays.asList(
-                frontendUrl,
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://127.0.0.1:5173",
-                "http://127.0.0.1:5174",
-                "http://localhost:*",
-                "http://127.0.0.1:*"
-        )); // Allow Vite dev server ports while keeping credentials enabled
-        config.setAllowedHeaders(Arrays.asList("Origin", "Content-Type", "Accept", "Authorization"));
+        config.setAllowedOriginPatterns(allowedOriginPatterns());
+        config.setAllowedHeaders(Arrays.asList(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "X-Requested-With",
+                "Origin"
+        ));
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setExposedHeaders(Arrays.asList("Set-Cookie", "Authorization"));
         source.registerCorsConfiguration("/**", config);
-        return new CorsFilter(source);
+        return source;
     }
 
     @Bean
@@ -91,5 +109,23 @@ public class SecurityConfig {
     public UserDetailsService userDetailsService() {
         return username -> userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    }
+
+    private List<String> allowedOriginPatterns() {
+        List<String> origins = new ArrayList<>(Arrays.asList(frontendUrls.split(",")));
+        origins.add(PRODUCTION_FRONTEND_ORIGIN);
+        origins.add("https://*.vercel.app");
+        origins.add(LOCAL_FRONTEND_ORIGIN);
+        origins.add("http://localhost:5174");
+        origins.add("http://127.0.0.1:5173");
+        origins.add("http://127.0.0.1:5174");
+        origins.add("http://localhost:*");
+        origins.add("http://127.0.0.1:*");
+
+        return origins.stream()
+                .map(String::trim)
+                .filter(origin -> !origin.isEmpty())
+                .distinct()
+                .toList();
     }
 }
