@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.boot.autoconfigure.r2dbc.R2dbcAutoConfiguration;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -21,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 @SpringBootApplication(exclude = {R2dbcAutoConfiguration.class})
 @EnableCaching
+@EnableScheduling
 @EnableJpaRepositories(basePackages = "com.example.back_end.repository")
 @EntityScan(basePackages = "com.example.back_end.entity")
 public class BackEndApplication {

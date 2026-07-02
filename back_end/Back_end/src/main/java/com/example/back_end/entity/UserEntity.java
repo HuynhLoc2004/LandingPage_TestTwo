@@ -24,6 +24,9 @@ public class UserEntity implements UserDetails {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private FavoriteList favoriteList;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private NotificationEmail notificationEmail;
+
     @Column(nullable = false, unique = true)
     private String username;
 

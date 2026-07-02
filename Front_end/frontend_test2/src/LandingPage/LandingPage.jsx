@@ -34,6 +34,7 @@ import {
 import { twMerge } from "tailwind-merge";
 import api from "../api/axios"; // Import the configured axios instance
 import FavoriteProducts from "../components/FavoriteProducts"; // Import FavoriteProducts component
+import NewsletterSubscribe from "../components/NewsletterSubscribe";
 
 // --- DATA: LOGO MARQUEE ---
 const FacebookIcon = ({ className = "" }) => (
@@ -1616,6 +1617,9 @@ export default function LandingPage({
           <MessageSquare className="w-5 h-5" />
         </motion.button>
       )}
+
+      {/* NEWSLETTER SUBSCRIBE SECTION */}
+      <NewsletterSubscribe />
 
       {/* FOOTER */}
       <footer className="w-full max-w-[1200px] mx-auto px-4 pb-10 sm:pb-14 pt-6 sm:pt-10">
