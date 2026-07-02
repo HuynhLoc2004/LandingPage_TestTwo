@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-
-// Usually from env var, e.g., import.meta.env.VITE_API_BASE_URL
-const WS_URL = import.meta.env.VITE_WS_BASE_URL || (window.location.protocol === "https:" ? "https://localhost:8080" : "http://localhost:8080");
+import { WS_BASE_URL } from "../config/env";
 
 export function useWebSocket({ enabled = true } = {}) {
   const [stompClient, setStompClient] = useState(null);
@@ -9,52 +7,108 @@ export function useWebSocket({ enabled = true } = {}) {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !WS_BASE_URL) {
+      return;
+    }
 
     let isUnmounted = false;
     let client;
 
     const connect = async () => {
-      const [{ Client }, { default: SockJS }] = await Promise.all([
-        import("@stomp/stompjs"),
-        import("sockjs-client"),
-      ]);
+      try {
+        console.log("[WS CONNECTING]", WS_BASE_URL);
 
-      if (isUnmounted) return;
+        const [{ Client }, { default: SockJS }] = await Promise.all([
+          import("@stomp/stompjs"),
+          import("sockjs-client"),
+        ]);
 
-      client = new Client({
-        webSocketFactory: () => new SockJS(`${WS_URL}/ws`),
-        onConnect: () => {
-          if (isUnmounted) return;
-          setIsConnected(true);
+        if (isUnmounted) return;
 
-          // Subscribe to the topic configured in backend
-          client.subscribe("/topic/subscription", (message) => {
-            if (message.body) {
-              const data = JSON.parse(message.body);
-              if (isUnmounted) return;
-              setMessages((prev) => [...prev, data]);
+        client = new Client({
+          webSocketFactory: () => new SockJS(WS_BASE_URL),
+          onConnect: () => {
+            if (isUnmounted) return;
+
+            console.log("[WS CONNECTED]");
+            setIsConnected(true);
+
+            client.subscribe("/topic/subscription", (message) => {
+              if (!message.body || isUnmounted) {
+                return;
+              }
+
+              try {
+                const data = JSON.parse(message.body);
+                setMessages((prev) => [...prev, data]);
+              } catch (parseError) {
+                console.error("[WS ERROR]", {
+                  message: "Failed to parse STOMP message body",
+                  error: parseError,
+                  rawBody: message.body,
+                });
+              }
+            });
+          },
+          onDisconnect: () => {
+            if (isUnmounted) return;
+
+            console.warn("[WS CLOSED]", {
+              reason: "STOMP client disconnected",
+            });
+            setIsConnected(false);
+          },
+          onStompError: (frame) => {
+            console.error("[WS ERROR]", {
+              type: "STOMP",
+              message: frame.headers["message"],
+              details: frame.body,
+            });
+            if (!isUnmounted) {
+              setIsConnected(false);
             }
-          });
-        },
-        onDisconnect: () => {
-          if (isUnmounted) return;
-          setIsConnected(false);
-        },
-        onStompError: (frame) => {
-          console.error("Broker reported error: " + frame.headers["message"]);
-          console.error("Additional details: " + frame.body);
-        },
-        reconnectDelay: 5000,
-        heartbeatIncoming: 4000,
-        heartbeatOutgoing: 4000,
-      });
+          },
+          onWebSocketClose: (event) => {
+            if (isUnmounted) return;
 
-      client.activate();
-      setStompClient(client);
+            console.warn("[WS CLOSED]", {
+              code: event.code,
+              reason: event.reason,
+              wasClean: event.wasClean,
+              url: WS_BASE_URL,
+            });
+            setIsConnected(false);
+          },
+          onWebSocketError: (event) => {
+            console.error("[WS ERROR]", {
+              type: "SOCKJS",
+              url: WS_BASE_URL,
+              event,
+            });
+            if (!isUnmounted) {
+              setIsConnected(false);
+            }
+          },
+          reconnectDelay: 5000,
+          heartbeatIncoming: 4000,
+          heartbeatOutgoing: 4000,
+        });
+
+        client.activate();
+        setStompClient(client);
+      } catch (error) {
+        console.error("[WS ERROR]", {
+          type: "INITIALIZATION",
+          url: WS_BASE_URL,
+          error,
+        });
+        if (!isUnmounted) {
+          setIsConnected(false);
+        }
+      }
     };
 
-    const timer = window.setTimeout(connect, 1000);
+    const timer = window.setTimeout(connect, 0);
 
     const disconnectBeforeUnload = () => {
       isUnmounted = true;
