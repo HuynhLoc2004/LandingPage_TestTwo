@@ -22,19 +22,25 @@ spring:
   liquibase:
     enabled: true
   mail:
-    host: smtp.gmail.com
-    port: 587
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
     username: ${MAIL_USERNAME}
     password: ${MAIL_PASSWORD}
+    protocol: ${MAIL_PROTOCOL:smtp}
+    test-connection: ${MAIL_TEST_CONNECTION:false}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: ${MAIL_SMTP_AUTH:true}
           starttls:
-            enable: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
+            enable: ${MAIL_STARTTLS_ENABLE:true}
+            required: ${MAIL_STARTTLS_REQUIRED:true}
+          ssl:
+            enable: ${MAIL_SSL_ENABLE:false}
+            trust: ${MAIL_SSL_TRUST:smtp.gmail.com}
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT:20000}
+          timeout: ${MAIL_TIMEOUT:20000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT:20000}
 server:
   port: 8080
   forward-headers-strategy: FRAMEWORK

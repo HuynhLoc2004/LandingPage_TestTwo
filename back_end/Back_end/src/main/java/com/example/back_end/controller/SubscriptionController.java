@@ -6,6 +6,7 @@ import com.example.back_end.repository.NotificationEmailRepository;
 import com.example.back_end.repository.UserRepository;
 import com.example.back_end.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.TaskScheduler;
@@ -44,9 +45,9 @@ public class SubscriptionController {
         try {
             emailService.generateAndSendOtp(email);
             return ResponseEntity.ok(Map.of("message", "OTP sent successfully"));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("message", "Error sending email: " + e.getMessage()));
+        } catch (IllegalStateException exception) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("message", exception.getMessage()));
         }
     }
 
