@@ -44,7 +44,9 @@ export function useWebSocket() {
     });
 
     client.activate();
-    setStompClient(client);
+    setTimeout(() => {
+      setStompClient(client);
+    }, 0);
 
     const disconnectBeforeUnload = () => {
       isUnmounted = true;

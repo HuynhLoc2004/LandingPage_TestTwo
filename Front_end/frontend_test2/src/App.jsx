@@ -111,7 +111,9 @@ function AppContent() {
 
     useEffect(() => {
         if (isLoggedIn) { // Only fetch if logged in
-            fetchFavorites();
+            setTimeout(() => {
+                fetchFavorites();
+            }, 0);
         }
     }, [fetchFavorites, isLoggedIn]);
 

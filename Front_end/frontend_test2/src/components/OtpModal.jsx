@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 
@@ -8,8 +8,10 @@ export default function OtpModal({ isOpen, onClose, onVerify, email, isVerifying
 
   useEffect(() => {
     if (isOpen) {
-      setOtp(['', '', '', '', '', '']);
-      setTimeout(() => inputRefs.current[0]?.focus(), 100);
+      setTimeout(() => {
+        setOtp(['', '', '', '', '', '']);
+        inputRefs.current[0]?.focus();
+      }, 0);
     }
   }, [isOpen]);
 

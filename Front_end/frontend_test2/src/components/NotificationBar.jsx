@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Info } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import './NotificationBar.css';
@@ -15,8 +15,10 @@ const NotificationBar = ({ message, type = 'info', duration = 5000, onDone }) =>
 
     useEffect(() => {
         if (message) {
-            setVisible(true);
-            setExiting(false);
+            setTimeout(() => {
+                setVisible(true);
+                setExiting(false);
+            }, 0);
 
             const exitTimer = setTimeout(() => {
                 setExiting(true);
@@ -59,4 +61,4 @@ const NotificationBar = ({ message, type = 'info', duration = 5000, onDone }) =>
     );
 };
 
-export default NotificationBar;
+export default NotificationBar; // Added a comment to force re-evaluation

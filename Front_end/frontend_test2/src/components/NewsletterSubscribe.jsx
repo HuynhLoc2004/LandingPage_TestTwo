@@ -55,7 +55,10 @@ export default function NewsletterSubscribe({ showNotification }) {
 
   // Chạy lần đầu khi load trang
   useEffect(() => {
-    fetchSubscriptionStatus();
+    const loadStatus = async () => {
+      await fetchSubscriptionStatus();
+    };
+    loadStatus();
   }, []);
 
   // Lắng nghe sự thay đổi của token (khi User Login hoặc Logout) để cập nhật UI lập tức
@@ -92,9 +95,11 @@ export default function NewsletterSubscribe({ showNotification }) {
     if (messages.length > 0) {
       const latestMessage = messages[messages.length - 1];
       if (latestMessage && latestMessage.message === 'Subscription successful' && latestMessage.email === email) {
-        setIsSubscribed(true);
-        setSubscribedEmail(latestMessage.email);
-        setIsOtpModalOpen(false); // Close modal if open
+        setTimeout(() => {
+          setIsSubscribed(true);
+          setSubscribedEmail(latestMessage.email);
+          setIsOtpModalOpen(false); // Close modal if open
+        }, 0);
       }
     }
   }, [messages, email]);
@@ -155,10 +160,10 @@ export default function NewsletterSubscribe({ showNotification }) {
       setIsSubscribed(false);
       setSubscribedEmail('');
       setEmail('');
-      setNotification({ message: 'Hủy đăng ký nhận thông báo thành công!', type: 'success' });
+      showNotification('Hủy đăng ký nhận thông báo thành công!', 'success');
     } catch (error) {
       console.error('Failed to unsubscribe:', error);
-      setNotification({ message: error.response?.data?.message || 'Có lỗi xảy ra khi hủy đăng ký. Vui lòng thử lại.', type: 'error' });
+      showNotification(error.response?.data?.message || 'Có lỗi xảy ra khi hủy đăng ký. Vui lòng thử lại.', 'error');
     } finally {
       setIsUnsubscribing(false);
     }
@@ -317,13 +322,6 @@ export default function NewsletterSubscribe({ showNotification }) {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Notification Bar */}
-      <NotificationBar
-        message={notification.message}
-        type={notification.type}
-        onDone={() => setNotification({ message: '', type: 'info' })}
-      />
     </div>
   );
 }
