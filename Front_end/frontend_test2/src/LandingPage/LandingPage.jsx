@@ -571,12 +571,11 @@ export default function LandingPage({
           `}</style>
         </>
       )}
-      {/* GLOBAL FIXED NAVBAR */}
-      <motion.div
-        style={{ x: headerX, y: headerY }}
+      <header
         className="fixed top-3 left-1/2 -translate-x-1/2 z-[40] w-full max-w-[1200px] px-3 sm:px-4 pt-[env(safe-area-inset-top)]"
       >
-        <nav
+        <motion.nav
+          style={{ x: headerX, y: headerY }}
           className={twMerge(
             "flex items-center justify-between px-4 sm:px-6 py-3 rounded-full border shadow-lg backdrop-blur-2xl transition-all will-change-transform",
             darkMode
@@ -611,6 +610,7 @@ export default function LandingPage({
             <button
               onClick={toggleDarkMode}
               className="p-2 rounded-full hover:bg-slate-500/10 transition-colors cursor-pointer"
+              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
               {darkMode ? (
                 <Sun className="w-4 h-4 text-amber-400" />
@@ -623,6 +623,7 @@ export default function LandingPage({
             <button
               onClick={() => setIsFavoritesOpen(true)}
               className="relative p-2 rounded-full hover:bg-slate-500/10 transition-colors cursor-pointer"
+              aria-label="View favorite products"
             >
               <Heart
                 className={twMerge(
@@ -641,6 +642,7 @@ export default function LandingPage({
             <button
               onClick={() => setIsCartOpen(true)}
               className="relative p-2 rounded-full hover:bg-slate-500/10 transition-colors cursor-pointer"
+              aria-label="View shopping cart"
             >
               <ShoppingBag className="w-4 h-4" />
               {cartCount > 0 && (
@@ -669,6 +671,7 @@ export default function LandingPage({
                   ? "bg-white text-slate-900 border-white hover:bg-emerald-50"
                   : "bg-slate-900 text-white border-slate-900 hover:bg-slate-800",
               )}
+              aria-label={isLoggedIn ? "Logout" : "Login or Register"}
             >
               {isLoggedIn ? (
                 <>
@@ -683,13 +686,13 @@ export default function LandingPage({
               )}
             </button>
           </div>
-        </nav>
-      </motion.div>
+        </motion.nav>
+      </header>
 
-      {/* 2 + 3. HERO CONTAINER & 3D PHONE VIEWPORT */}
-      <div
+      <section
         ref={heroRef}
         className="relative z-10 w-full max-w-[1400px] mx-auto pt-24 sm:pt-28 px-3 sm:px-4"
+        aria-labelledby="hero-heading"
       >
         <div
           className={twMerge(
@@ -725,7 +728,7 @@ export default function LandingPage({
             >
               ✦ Enterprise Intelligent Infrastructure
             </span>
-            <h1 className="font-display text-[42px] md:text-[58px] font-medium leading-[1.05] tracking-tight mb-4">
+            <h1 id="hero-heading" className="font-display text-[42px] md:text-[58px] font-medium leading-[1.05] tracking-tight mb-4">
               Foundation of the
               <br />
               new digital epoch
@@ -794,10 +797,11 @@ export default function LandingPage({
             </motion.div>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* 5. SEAMLESS INFINITE MARQUEE LOGO SCROLLER */}
-      <div className="mt-6 sm:mt-8 relative w-full overflow-hidden py-3 sm:py-4">
+      <section className="mt-6 sm:mt-8 relative w-full overflow-hidden py-3 sm:py-4" aria-labelledby="logo-marquee-heading">
+        <h2 id="logo-marquee-heading" className="sr-only">Client Logos</h2>
         <div className="flex gap-6 w-max animate-marquee hover:[animation-play-state:paused]">
           {[...LOGOS, ...LOGOS].map((logo, idx) => (
             <div
@@ -827,7 +831,7 @@ export default function LandingPage({
           @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
           .animate-marquee { animation: marquee 30s linear infinite; }
         `}</style>
-      </div>
+      </section>
 
       {/* SECTION: TÍNH NĂNG NỔI BẬT (FEATURES SCROLLYTELLING) */}
       <section
@@ -1304,8 +1308,8 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* 5. FORM ĐĂNG KÝ NHẬN TIN (NEWSLETTER FORM SECTION) */}
-      <section className="w-full max-w-[1200px] mx-auto px-4 pb-20 sm:pb-24">
+      {/* NEWSLETTER SUBSCRIBE SECTION */}
+      <section className="w-full max-w-[1200px] mx-auto px-4 pb-20 sm:pb-24" aria-labelledby="newsletter-heading">
         <div
           className={twMerge(
             "rounded-[40px] p-8 md:p-16 border relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8",
@@ -1315,7 +1319,7 @@ export default function LandingPage({
           )}
         >
           <div className="max-w-md">
-            <h2 className="font-display text-2xl md:text-3xl font-semibold tracking-tight">
+            <h2 id="newsletter-heading" className="font-display text-2xl md:text-3xl font-semibold tracking-tight">
               Stay updated with the next epoch
             </h2>
             <p
@@ -1347,7 +1351,9 @@ export default function LandingPage({
                 }}
                 className="flex gap-2 w-full"
               >
+                <label htmlFor="email-input" className="sr-only">Email Address</label>
                 <input
+                  id="email-input"
                   type="email"
                   required
                   placeholder="Enter client email endpoint..."
@@ -1363,6 +1369,7 @@ export default function LandingPage({
                 <button
                   type="submit"
                   className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-2xl transition-transform active:scale-95 cursor-pointer"
+                  aria-label="Subscribe to newsletter"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -1460,6 +1467,7 @@ export default function LandingPage({
                       placeholder="Nhập tài khoản (không khoảng trắng)"
                       className="w-full bg-transparent text-sm outline-none placeholder:text-slate-500"
                       onChange={handleInputChange}
+                      aria-label="Tài khoản"
                     />
                   </div>
                 </label>
@@ -1484,6 +1492,7 @@ export default function LandingPage({
                       onChange={handleInputChange}
                       placeholder="Tối thiểu 6 ký tự, hoa, thường, số, đặc biệt"
                       className="w-full bg-transparent text-sm outline-none placeholder:text-slate-500"
+                      aria-label="Mật khẩu"
                     />
                     <button
                       type="button"
@@ -1574,6 +1583,7 @@ export default function LandingPage({
                   <button
                     onClick={() => setIsCartOpen(false)}
                     className="p-1 hover:opacity-60 cursor-pointer"
+                    aria-label="Close cart"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -1612,6 +1622,7 @@ export default function LandingPage({
                               )
                             }
                             className="p-0.5 opacity-60 hover:opacity-100 cursor-pointer"
+                            aria-label={`Decrease quantity of ${item.productName}`}
                           >
                             <Minus className="w-3 h-3" />
                           </button>
@@ -1626,6 +1637,7 @@ export default function LandingPage({
                               )
                             }
                             className="p-0.5 opacity-60 hover:opacity-100 cursor-pointer"
+                            aria-label={`Increase quantity of ${item.productName}`}
                           >
                             <Plus className="w-3 h-3" />
                           </button>
@@ -1677,8 +1689,8 @@ export default function LandingPage({
           >
             <div className="bg-[linear-gradient(135deg,rgba(10,18,28,0.98),rgba(13,24,35,0.96))] border-b border-white/10 p-4 text-white flex items-center justify-between shadow-[0_10px_30px_rgba(0,0,0,0.22)]">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.30),rgba(34,197,94,0.12))] border border-emerald-400/20 shadow-[0_0_24px_rgba(16,185,129,0.18)]">
-                  <Bot className="w-4 h-4 text-emerald-300" />
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.30),rgba(34,197,94,0.12))] border border-emerald-400/20 shadow-[0_0_24px_rgba(16,185,129,0.18)]">
+                  <Bot className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-300/90">
@@ -1692,6 +1704,7 @@ export default function LandingPage({
               <button
                 onClick={() => setIsChatOpen(false)}
                 className="p-2 rounded-full cursor-pointer text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+                aria-label="Close chat"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1731,7 +1744,9 @@ export default function LandingPage({
                   : "border-slate-200/70 bg-white/80",
               )}
             >
+              <label htmlFor="chat-input" className="sr-only">Chat message</label>
               <input
+                id="chat-input"
                 type="text"
                 placeholder="Ask about specifications..."
                 className={twMerge(
@@ -1741,7 +1756,8 @@ export default function LandingPage({
                     : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400",
                 )}
               />
-              <button className="bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#0f766e)] text-white p-2.5 rounded-2xl hover:opacity-95 cursor-pointer shadow-[0_10px_24px_rgba(29,78,216,0.22)] transition-all active:scale-95">
+              <button className="bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#0f766e)] text-white p-2.5 rounded-2xl hover:opacity-95 cursor-pointer shadow-[0_10px_24px_rgba(29,78,216,0.22)] transition-all active:scale-95"
+              aria-label="Send message">
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
@@ -1771,6 +1787,7 @@ export default function LandingPage({
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-3 sm:right-6 bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-full shadow-xl z-40 cursor-pointer"
+          aria-label="Open chat"
         >
           <MessageSquare className="w-5 h-5" />
         </motion.button>
@@ -1780,7 +1797,7 @@ export default function LandingPage({
       <NewsletterSubscribe />
 
       {/* FOOTER */}
-      <footer className="w-full max-w-[1200px] mx-auto px-4 pb-10 sm:pb-14 pt-6 sm:pt-10">
+      <footer className="w-full max-w-[1200px] mx-auto px-4 pb-10 sm:pb-14 pt-6 sm:pt-10" aria-labelledby="footer-heading">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -1799,7 +1816,7 @@ export default function LandingPage({
               <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.28em] px-3 py-1 rounded-full border border-emerald-500/15 bg-emerald-500/10 text-emerald-300">
                 Contact Information
               </span>
-              <h2 className="font-display text-3xl sm:text-4xl font-semibold mt-5 tracking-tight leading-[1.02]">
+              <h2 id="footer-heading" className="font-display text-3xl sm:text-4xl font-semibold mt-5 tracking-tight leading-[1.02]">
                 Get in touch for consultation and support
               </h2>
               <p
@@ -1824,7 +1841,7 @@ export default function LandingPage({
               <h3 className="font-display text-xl font-semibold mb-5">
                 Contact Details
               </h3>
-              <div className="space-y-4 text-sm">
+              <address className="space-y-4 text-sm not-italic">
                 <div className="flex items-start gap-3">
                   <span className="mt-0.5 text-emerald-400">●</span>
                   <div>
@@ -1859,7 +1876,7 @@ export default function LandingPage({
                     </p>
                   </div>
                 </div>
-              </div>
+              </address>
             </div>
 
             <div

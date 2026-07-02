@@ -6,4 +6,13 @@ export default defineConfig({
   define: {
     global: 'window', // Polyfill for sockjs-client
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+        },
+      },
+    },
+  },
 });

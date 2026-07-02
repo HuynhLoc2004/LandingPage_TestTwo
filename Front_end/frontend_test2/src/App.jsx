@@ -134,7 +134,7 @@ function AppContent() {
     };
 
     return (
-        <>
+        <main>
             <NotificationBar
                 message={notification?.message}
                 type={notification?.type}
@@ -160,11 +160,11 @@ function AppContent() {
                         }
                     />
                     <Route path="/dashboard" element={<OrderDashboard />} />
-                </Routes>
-            </Suspense>
-        </>
-    );
-}
+                    </Routes>
+                </Suspense>
+        </main>
+        );
+    }
 
 function App() {
   return (
