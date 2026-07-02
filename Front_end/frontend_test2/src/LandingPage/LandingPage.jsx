@@ -147,7 +147,7 @@ export default function LandingPage({
     username: "",
     password: "",
   });
-  const [products] = useState([]); // State to store all product specifications
+  const [products, setProducts] = useState([]); // State to store all product specifications
   const [currentProduct, setCurrentProduct] = useState(null); // State to store the currently displayed product
   const [cartCount, setCartCount] = useState(0);
   const [cartItems, setCartItems] = useState([]);
@@ -220,6 +220,35 @@ export default function LandingPage({
     return () =>
       window.removeEventListener("auth:login-required", openLoginForm);
   }, [showNotification, setAuthMode, setIsLoginOpen]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchProducts = async () => {
+      try {
+        const response = await api.get("/products");
+        const nextProducts = Array.isArray(response.data) ? response.data : [];
+
+        if (!isMounted) {
+          return;
+        }
+
+        setProducts(nextProducts);
+        setCurrentProduct((current) => current || nextProducts[0] || null);
+      } catch (error) {
+        console.error("Failed to fetch products:", error);
+        if (isMounted) {
+          showNotification("Failed to load products.", "error");
+        }
+      }
+    };
+
+    fetchProducts();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [showNotification]);
 
   // Tracking Scroll để làm hiệu ứng Điện thoại 3D lướt lên & nghiêng góc
   const heroRef = useRef(null);
