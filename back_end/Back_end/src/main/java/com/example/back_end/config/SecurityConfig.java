@@ -32,7 +32,7 @@ public class SecurityConfig {
     private final UserRepository userRepository;
     // Remove JwtAuthenticationFilter from constructor injection
 
-    @Value("${FRONTEND_URL:http://localhost:5173}")
+    @Value("${FRONTEND_URL:https://landing-page-test-two-git-main-huynhtanloc.vercel.app}")
     private String frontendUrl;
 
     @Bean
@@ -48,7 +48,7 @@ public class SecurityConfig {
                         })
                 )
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/auth/**", "/products/**", "/ws/**").permitAll()
+                        .requestMatchers("/auth/**", "/products/**", "/ws/**", "/api/subscribe/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

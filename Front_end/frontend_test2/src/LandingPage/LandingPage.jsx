@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   motion,
   useScroll,
@@ -18,7 +18,6 @@ import {
   Battery,
   Volume2,
   ShieldCheck,
-  Mail,
   Send,
   Bot,
   MessageSquare,
@@ -151,6 +150,11 @@ export default function LandingPage({
   const pendingFavoriteIdsRef = useRef(new Set());
   const pendingCartItemIdsRef = useRef(new Set());
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setLoginForm((prev) => ({ ...prev, [name]: value }));
+  };
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true); // Set loading to true
@@ -189,17 +193,11 @@ export default function LandingPage({
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setLoginForm((prev) => ({ ...prev, [name]: value }));
-  };
-
   // States cấu hình sản phẩm (E-commerce Mini)
   const [selectedColor, setSelectedColor] = useState("Onyx Black");
   const [selectedSize, setSelectedSize] = useState("Medium");
   const [cartCount, setCartCount] = useState(0);
   const [cartItems, setCartItems] = useState([]);
-  const [isFavorite, setIsFavorite] = useState(false);
 
   // Form Đăng ký nhận tin state
   const [email, setEmail] = useState("");
@@ -236,7 +234,7 @@ export default function LandingPage({
     window.addEventListener("auth:login-required", openLoginForm);
     return () =>
       window.removeEventListener("auth:login-required", openLoginForm);
-  }, [showNotification]);
+  }, [showNotification]); // Removed handleInputChange from dependency array
 
   // Tracking Scroll để làm hiệu ứng Điện thoại 3D lướt lên & nghiêng góc
   const heroRef = useRef(null);

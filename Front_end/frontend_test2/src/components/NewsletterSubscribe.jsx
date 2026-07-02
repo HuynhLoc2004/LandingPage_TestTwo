@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, BellRing, Trash2, CheckCircle2 } from 'lucide-react';
 import OtpModal from './OtpModal';
-import NotificationBar from './NotificationBar'; // Import NotificationBar
 import { useWebSocket } from '../hooks/useWebSocket';
 import api from '../api/axios'; // Make sure this is the correct axios instance path
 
-export default function NewsletterSubscribe() {
+export default function NewsletterSubscribe({ showNotification }) {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
@@ -14,8 +13,6 @@ export default function NewsletterSubscribe() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [authError, setAuthError] = useState(false); // Thêm state quản lý lỗi chưa đăng nhập
   
-  // Notification state
-  const [notification, setNotification] = useState({ message: '', type: 'info' });
 
   // Subscription states
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -124,7 +121,7 @@ export default function NewsletterSubscribe() {
       setIsOtpModalOpen(true);
     } catch (error) {
       console.error('Failed to request OTP:', error);
-      setNotification({ message: error.response?.data?.message || 'Có lỗi xảy ra khi gửi OTP. Vui lòng thử lại.', type: 'error' });
+      showNotification(error.response?.data?.message || 'Có lỗi xảy ra khi gửi OTP. Vui lòng thử lại.', 'error');
     } finally {
       setIsSubmitting(false);
     }

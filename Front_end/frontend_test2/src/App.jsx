@@ -30,6 +30,26 @@ function AppContent() {
         }
     }, [isLoggedIn]);
 
+    const handleLogout = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            await api.post("/auth/logout");
+            showNotification("Logout successful!", "info");
+        } catch (error) {
+            console.error("Logout failed:", error);
+            showNotification("Logout failed!", "error");
+        } finally {
+            localStorage.removeItem("accessToken");
+            setIsLoggedIn(false);
+            setFavorites([]);
+            setIsLoading(false);
+            if (refreshTokenTimeoutRef.current) {
+                clearTimeout(refreshTokenTimeoutRef.current);
+            }
+            navigate("/");
+        }
+    }, [navigate, showNotification, setIsLoading, setFavorites]); // Add dependencies
+
     useEffect(() => {
         fetchFavorites();
     }, [fetchFavorites]);
@@ -85,7 +105,7 @@ function AppContent() {
                 handleLogout();
             }
         }
-    }, []);
+    }, [handleLogout]); // Add handleLogout as a dependency
 
     useEffect(() => {
         setupRefreshTokenTimer();
@@ -101,26 +121,6 @@ function AppContent() {
         showNotification("Login successful!", "success");
         fetchFavorites();
         setupRefreshTokenTimer(); // Start refresh timer on successful login
-    };
-
-    const handleLogout = async () => {
-        setIsLoading(true);
-        try {
-            await api.post("/auth/logout");
-            showNotification("Logout successful!", "info");
-        } catch (error) {
-            console.error("Logout failed:", error);
-            showNotification("Logout failed!", "error");
-        } finally {
-            localStorage.removeItem("accessToken");
-            setIsLoggedIn(false);
-            setFavorites([]);
-            setIsLoading(false);
-            if (refreshTokenTimeoutRef.current) {
-                clearTimeout(refreshTokenTimeoutRef.current);
-            }
-            navigate("/");
-        }
     };
 
     return (

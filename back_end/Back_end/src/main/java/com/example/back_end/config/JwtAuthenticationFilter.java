@@ -16,14 +16,31 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.beans.factory.annotation.Autowired; // Add this import
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
+import org.springframework.util.AntPathMatcher;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired // Use field injection
+    @Autowired
     private JwtService jwtService;
-    @Autowired // Use field injection
+    @Autowired
     private UserDetailsService userDetailsService;
+
+    // Define paths that should be excluded from JWT authentication
+    private static final List<String> EXCLUDED_PATHS = Arrays.asList(
+            "/auth/**",
+            "/products/**",
+            "/ws/**",
+            "/api/subscribe/**" // Add newsletter subscription endpoints
+    );
+
+    @Override
+    protected boolean shouldNotFilter(@NonNull HttpServletRequest request) throws ServletException {
+        String path = request.getRequestURI();
+        return EXCLUDED_PATHS.stream().anyMatch(pattern -> new AntPathMatcher().match(pattern, path));
+    }
 
     @Override
     protected void doFilterInternal(

@@ -67,7 +67,7 @@ const FavoriteProducts = ({ favorites, toggleFavorite, darkMode, onClose }) => {
                       </button>
                     </div>
                     <p className="text-lg font-bold text-emerald-500 mt-1">
-                      ${product.price?.toLocaleString()}
+                      ${(product.price || 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
