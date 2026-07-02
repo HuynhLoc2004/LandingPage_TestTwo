@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, BellRing, Trash2, CheckCircle2 } from 'lucide-react';
 import OtpModal from './OtpModal';
+import NotificationBar from './NotificationBar'; // Import NotificationBar
 import { useWebSocket } from '../hooks/useWebSocket';
 import api from '../api/axios'; // Make sure this is the correct axios instance path
 
@@ -13,11 +14,15 @@ export default function NewsletterSubscribe() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [authError, setAuthError] = useState(false); // Thêm state quản lý lỗi chưa đăng nhập
   
+  // Notification state
+  const [notification, setNotification] = useState({ message: '', type: 'info' });
+
   // Subscription states
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscribedEmail, setSubscribedEmail] = useState('');
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
   const [isUnsubscribing, setIsUnsubscribing] = useState(false);
+  const [isUnsubscribeModalOpen, setIsUnsubscribeModalOpen] = useState(false); // New state for unsubscribe confirmation modal
   
   // Custom WebSocket Hook
   const { isConnected, messages } = useWebSocket();
@@ -119,7 +124,7 @@ export default function NewsletterSubscribe() {
       setIsOtpModalOpen(true);
     } catch (error) {
       console.error('Failed to request OTP:', error);
-      alert(error.response?.data?.message || 'Có lỗi xảy ra khi gửi OTP. Vui lòng thử lại.');
+      setNotification({ message: error.response?.data?.message || 'Có lỗi xảy ra khi gửi OTP. Vui lòng thử lại.', type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -145,21 +150,25 @@ export default function NewsletterSubscribe() {
     }
   };
 
-  const handleUnsubscribe = async () => {
-    if (!window.confirm('Bạn có chắc chắn muốn hủy nhận thông báo sự kiện không?')) return;
-    
+  const handleUnsubscribeConfirm = async () => {
+    setIsUnsubscribeModalOpen(false); // Close modal
     setIsUnsubscribing(true);
     try {
       await api.delete('/api/subscribe/unsubscribe');
       setIsSubscribed(false);
       setSubscribedEmail('');
       setEmail('');
+      setNotification({ message: 'Hủy đăng ký nhận thông báo thành công!', type: 'success' });
     } catch (error) {
       console.error('Failed to unsubscribe:', error);
-      alert('Có lỗi xảy ra khi hủy đăng ký. Vui lòng thử lại.');
+      setNotification({ message: error.response?.data?.message || 'Có lỗi xảy ra khi hủy đăng ký. Vui lòng thử lại.', type: 'error' });
     } finally {
       setIsUnsubscribing(false);
     }
+  };
+
+  const handleUnsubscribe = () => {
+    setIsUnsubscribeModalOpen(true); // Open confirmation modal
   };
 
   return (
@@ -273,6 +282,50 @@ export default function NewsletterSubscribe() {
         onVerify={handleVerifyOtp}
         isVerifying={isVerifying}
         error={otpError}
+      />
+
+      {/* Unsubscribe Confirmation Modal */}
+      <AnimatePresence>
+        {isUnsubscribeModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl max-w-sm w-full text-center"
+            >
+              <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Xác nhận hủy đăng ký</h4>
+              <p className="text-slate-600 dark:text-slate-400 mb-6">Bạn có chắc chắn muốn hủy nhận thông báo sự kiện không?</p>
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={() => setIsUnsubscribeModalOpen(false)}
+                  className="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleUnsubscribeConfirm}
+                  className="px-6 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors"
+                  disabled={isUnsubscribing}
+                >
+                  {isUnsubscribing ? 'Đang hủy...' : 'Xác nhận hủy'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Notification Bar */}
+      <NotificationBar
+        message={notification.message}
+        type={notification.type}
+        onDone={() => setNotification({ message: '', type: 'info' })}
       />
     </div>
   );
