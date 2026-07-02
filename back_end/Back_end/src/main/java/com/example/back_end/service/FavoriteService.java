@@ -38,9 +38,7 @@ public class FavoriteService {
                     return favoriteListRepository.save(newFavoriteList);
                 });
 
-        if (!favoriteList.getProducts().add(product)) {
-            throw new AppException(HttpStatus.CONFLICT, "Product already in favorite list");
-        }
+        favoriteList.getProducts().add(product);
         return favoriteListRepository.save(favoriteList);
     }
 
@@ -55,9 +53,7 @@ public class FavoriteService {
         FavoriteList favoriteList = favoriteListRepository.findByUser(user)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Favorite list not found for user"));
 
-        if (!favoriteList.getProducts().remove(product)) {
-            throw new AppException(HttpStatus.NOT_FOUND, "Product not found in favorite list");
-        }
+        favoriteList.getProducts().remove(product);
         return favoriteListRepository.save(favoriteList);
     }
 

@@ -3,5 +3,8 @@
     <include resource="org/springframework/boot/logging/logback/base.xml"/>
 
     <logger name="com.example.back_end.service.JwtService" level="INFO"/>
+    <logger name="org.springframework.messaging.support.ExecutorSubscribableChannel" level="OFF"/>
+    <logger name="org.springframework.web.socket.messaging" level="ERROR"/>
+    <logger name="org.springframework.messaging.simp" level="ERROR"/>
 
 </configuration>

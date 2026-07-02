@@ -31,7 +31,7 @@ instance.interceptors.response.use(
         return instance(originalRequest);
       } catch (refreshError) {
         localStorage.removeItem("accessToken");
-        window.location.href = "/";
+        window.dispatchEvent(new CustomEvent("auth:login-required"));
         return Promise.reject(refreshError);
       }
     }

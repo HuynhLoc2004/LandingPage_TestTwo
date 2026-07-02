@@ -148,6 +148,8 @@ export default function LandingPage({
   });
   const [products, setProducts] = useState([]); // State to store all product specifications
   const [currentProduct, setCurrentProduct] = useState(null); // State to store the currently displayed product
+  const pendingFavoriteIdsRef = useRef(new Set());
+  const pendingCartItemIdsRef = useRef(new Set());
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -160,7 +162,10 @@ export default function LandingPage({
       showNotification("Login successful!", "success");
     } catch (error) {
       console.error("Login failed:", error);
-      showNotification(error.response?.data?.message || "Login failed!", "error");
+      showNotification(
+        error.response?.data?.message || "Login failed!",
+        "error",
+      );
     } finally {
       setIsLoading(false); // Set loading to false
     }
@@ -175,7 +180,10 @@ export default function LandingPage({
       setAuthMode("login");
     } catch (error) {
       console.error("Registration failed:", error);
-      showNotification(error.response?.data?.message || "Registration failed!", "error");
+      showNotification(
+        error.response?.data?.message || "Registration failed!",
+        "error",
+      );
     } finally {
       setIsLoading(false); // Set loading to false
     }
@@ -190,6 +198,7 @@ export default function LandingPage({
   const [selectedColor, setSelectedColor] = useState("Onyx Black");
   const [selectedSize, setSelectedSize] = useState("Medium");
   const [cartCount, setCartCount] = useState(0);
+  const [cartItems, setCartItems] = useState([]);
   const [isFavorite, setIsFavorite] = useState(false);
 
   // Form Đăng ký nhận tin state
@@ -216,6 +225,18 @@ export default function LandingPage({
     };
     fetchAllProducts();
   }, []);
+
+  useEffect(() => {
+    const openLoginForm = () => {
+      setAuthMode("login");
+      setIsLoginOpen(true);
+      showNotification("Your session expired. Please log in again.", "info");
+    };
+
+    window.addEventListener("auth:login-required", openLoginForm);
+    return () =>
+      window.removeEventListener("auth:login-required", openLoginForm);
+  }, [showNotification]);
 
   // Tracking Scroll để làm hiệu ứng Điện thoại 3D lướt lên & nghiêng góc
   const heroRef = useRef(null);
@@ -303,12 +324,107 @@ export default function LandingPage({
 
   const toggleDarkMode = () => setDarkMode(!darkMode);
 
-  const handleAddToCart = () => {
-    if (currentProduct) {
-      setCartCount((prev) => prev + 1);
+  const handleAddToCart = async () => {
+    if (!currentProduct) {
+      showNotification(
+        "Product details not loaded yet. Please try again.",
+        "error",
+      );
+      return;
+    }
+
+    if (!isLoggedIn) {
+      setAuthMode("login");
+      setIsLoginOpen(true);
+      showNotification("Please log in to add products to cart.", "info");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await api.post("/cart/add", {
+        productId: currentProduct.productId,
+        quantity: 1,
+        selectedColor,
+        selectedSize,
+      });
+
+      setCartCount(response.data?.totalQuantity ?? ((prev) => prev + 1));
+      setCartItems(response.data?.items || []);
       setIsCartOpen(true);
-    } else {
-      showNotification("Product details not loaded yet. Please try again.", "error");
+      showNotification(
+        response.data?.message || "Product added to cart",
+        "success",
+      );
+    } catch (error) {
+      console.error("Add to cart failed:", error);
+      if (error.response?.status === 401) {
+        setAuthMode("login");
+        setIsLoginOpen(true);
+        showNotification("Please log in again before adding to cart.", "info");
+      } else {
+        showNotification(
+          error.response?.data?.message || "Failed to add product to cart.",
+          "error",
+        );
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdateCartItemQuantity = async (cartItem, nextQuantity) => {
+    if (!cartItem?.cartItemId) return;
+    if (pendingCartItemIdsRef.current.has(cartItem.cartItemId)) return;
+
+    pendingCartItemIdsRef.current.add(cartItem.cartItemId);
+
+    const previousItems = [...cartItems];
+    const previousCount = cartCount;
+
+    const optimisticItems =
+      nextQuantity <= 0
+        ? cartItems.filter((item) => item.cartItemId !== cartItem.cartItemId)
+        : cartItems.map((item) =>
+            item.cartItemId === cartItem.cartItemId
+              ? { ...item, quantity: nextQuantity }
+              : item,
+          );
+
+    setCartItems(optimisticItems);
+    setCartCount(
+      optimisticItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
+    );
+
+    try {
+      const response =
+        nextQuantity <= 0
+          ? await api.delete(`/cart/items/${cartItem.cartItemId}`)
+          : await api.put(`/cart/items/${cartItem.cartItemId}`, {
+              quantity: nextQuantity,
+            });
+
+      setCartItems(response.data?.items || []);
+      setCartCount(response.data?.totalQuantity || 0);
+      if (nextQuantity <= 0) {
+        showNotification("Removed item from cart", "info");
+      }
+    } catch (error) {
+      console.error("Update cart quantity failed:", error);
+      setCartItems(previousItems);
+      setCartCount(previousCount);
+      if (error.response?.status === 401) {
+        setAuthMode("login");
+        setIsLoginOpen(true);
+        showNotification("Please log in again before updating cart.", "info");
+      } else {
+        showNotification(
+          error.response?.data?.message || "Failed to update cart.",
+          "error",
+        );
+      }
+    } finally {
+      pendingCartItemIdsRef.current.delete(cartItem.cartItemId);
     }
   };
 
@@ -317,6 +433,12 @@ export default function LandingPage({
       showNotification("Please log in to add favorites.", "info");
       return;
     }
+
+    if (pendingFavoriteIdsRef.current.has(productId)) {
+      return;
+    }
+
+    pendingFavoriteIdsRef.current.add(productId);
 
     // Save previous state for rollback
     const previousFavorites = [...favorites];
@@ -344,16 +466,20 @@ export default function LandingPage({
       } else {
         await api.post(`/favorites/add?productId=${productId}`);
       }
-      // Re-fetch favorites in background to sync state with server
-      fetchFavorites();
     } catch (error) {
       console.error("Favorite toggle failed:", error);
       showNotification("Failed to update favorites.", "error");
       // Rollback to previous state on failure
       setFavorites(previousFavorites);
+    } finally {
+      pendingFavoriteIdsRef.current.delete(productId);
     }
   };
 
+  const cartSubtotal = cartItems.reduce(
+    (sum, item) => sum + (item.price || 0) * (item.quantity || 0),
+    0,
+  );
 
   return (
     <div
@@ -419,7 +545,7 @@ export default function LandingPage({
       {/* GLOBAL FIXED NAVBAR */}
       <motion.div
         style={{ x: headerX, y: headerY }}
-        className="fixed top-3 left-1/2 -translate-x-1/2 z-50 w-full max-w-[1200px] px-3 sm:px-4 pt-[env(safe-area-inset-top)]"
+        className="fixed top-3 left-1/2 -translate-x-1/2 z-[40] w-full max-w-[1200px] px-3 sm:px-4 pt-[env(safe-area-inset-top)]"
       >
         <nav
           className={twMerge(
@@ -469,7 +595,12 @@ export default function LandingPage({
               onClick={() => setIsFavoritesOpen(true)}
               className="relative p-2 rounded-full hover:bg-slate-500/10 transition-colors cursor-pointer"
             >
-              <Heart className={twMerge("w-4 h-4", favorites.length > 0 && "fill-current text-rose-500")} />
+              <Heart
+                className={twMerge(
+                  "w-4 h-4",
+                  favorites.length > 0 && "fill-current text-rose-500",
+                )}
+              />
               {favorites.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                   {favorites.length}
@@ -549,39 +680,9 @@ export default function LandingPage({
               loop
               muted
               playsInline
-        className="w-full h-full object-cover scale-105"
+              className="w-full h-full object-cover scale-105"
             />
           </div>
-
-      {/* FAVORITES SIDEBAR */}
-      <AnimatePresence>
-        {isFavoritesOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-            onClick={() => setIsFavoritesOpen(false)}
-          />
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {isFavoritesOpen && (
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: "0%" }}
-            exit={{ x: "100%" }}
-            transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
-          >
-            <FavoriteProducts
-              favorites={favorites}
-              toggleFavorite={toggleFavorite}
-              darkMode={darkMode}
-              onClose={() => setIsFavoritesOpen(false)}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
           {/* Left Text Box */}
           <div className="relative z-20 flex-1 flex flex-col items-start max-w-xl">
@@ -644,8 +745,14 @@ export default function LandingPage({
               {/* CHỖ THAY ẢNH ĐIỆN THOẠI CHÍNH (HERO 3D SCROLL IMAGE) */}
               {currentProduct && (
                 <img
-                  src={currentProduct.imageUrl || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1400&auto=format&fit=crop"}
-                  alt={currentProduct.productName || "Cinematic Ultra Premium Smartphone Hardware Device"}
+                  src={
+                    currentProduct.imageUrl ||
+                    "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1400&auto=format&fit=crop"
+                  }
+                  alt={
+                    currentProduct.productName ||
+                    "Cinematic Ultra Premium Smartphone Hardware Device"
+                  }
                   width="240"
                   height="480"
                   decoding="async"
@@ -832,26 +939,47 @@ export default function LandingPage({
 
             <button
               type="button"
-              onClick={() => currentProduct && toggleFavorite(currentProduct.productId)}
+              onClick={() =>
+                currentProduct && toggleFavorite(currentProduct.productId)
+              }
               className={twMerge(
                 "mb-6 cursor-pointer inline-flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-all active:scale-[0.99]",
-                currentProduct && favorites.some((p) => p.productId === currentProduct.productId)
+                currentProduct &&
+                  favorites.some(
+                    (p) => p.productId === currentProduct.productId,
+                  )
                   ? "border-rose-500 bg-rose-500/10 text-rose-500"
                   : darkMode
                     ? "border-white/10 bg-white/5 text-slate-200 hover:bg-white/10"
                     : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
               )}
               aria-label={
-                currentProduct && favorites.some((p) => p.productId === currentProduct.productId)
+                currentProduct &&
+                favorites.some((p) => p.productId === currentProduct.productId)
                   ? "Remove from favorites"
                   : "Add to favorites"
               }
-              title={currentProduct && favorites.some((p) => p.productId === currentProduct.productId) ? "Liked" : "Add to favorites"}
+              title={
+                currentProduct &&
+                favorites.some((p) => p.productId === currentProduct.productId)
+                  ? "Liked"
+                  : "Add to favorites"
+              }
             >
               <Heart
-                className={twMerge("w-4 h-4", currentProduct && favorites.some((p) => p.productId === currentProduct.productId) && "fill-current")}
+                className={twMerge(
+                  "w-4 h-4",
+                  currentProduct &&
+                    favorites.some(
+                      (p) => p.productId === currentProduct.productId,
+                    ) &&
+                    "fill-current",
+                )}
               />
-              {currentProduct && favorites.some((p) => p.productId === currentProduct.productId) ? "Liked" : "Favorite"}
+              {currentProduct &&
+              favorites.some((p) => p.productId === currentProduct.productId)
+                ? "Liked"
+                : "Favorite"}
             </button>
 
             {/* Tab Controls */}
@@ -882,19 +1010,25 @@ export default function LandingPage({
               transition={{ duration: 0.28, ease: "easeOut" }}
               className="space-y-4 text-sm font-sans"
             >
-            {currentProduct && activeSpecTab === "dimensions" && (
+              {currentProduct && activeSpecTab === "dimensions" && (
                 <>
                   <div className="flex justify-between py-2 border-b border-slate-500/10">
                     <span>Height</span>
-                    <span className="font-semibold">{currentProduct.heightMm} mm</span>
+                    <span className="font-semibold">
+                      {currentProduct.heightMm} mm
+                    </span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-slate-500/10">
                     <span>Width</span>
-                    <span className="font-semibold">{currentProduct.widthMm} mm</span>
+                    <span className="font-semibold">
+                      {currentProduct.widthMm} mm
+                    </span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-slate-500/10">
                     <span>Depth</span>
-                    <span className="font-semibold">{currentProduct.depthMm} mm</span>
+                    <span className="font-semibold">
+                      {currentProduct.depthMm} mm
+                    </span>
                   </div>
                 </>
               )}
@@ -938,8 +1072,14 @@ export default function LandingPage({
             {/* CHỖ THAY ẢNH CHI TIẾT SẢN PHẨM HOẶC GÓC NGHIÊNG KHÁC (SPEC SHOWCASE IMAGE) */}
             {currentProduct && (
               <img
-                src={currentProduct.imageUrl || "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=900&auto=format&fit=crop"}
-                alt={currentProduct.productName || "Specifications Texture Close Up"}
+                src={
+                  currentProduct.imageUrl ||
+                  "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=900&auto=format&fit=crop"
+                }
+                alt={
+                  currentProduct.productName ||
+                  "Specifications Texture Close Up"
+                }
                 width="900"
                 height="350"
                 loading="lazy"
@@ -1017,7 +1157,9 @@ export default function LandingPage({
                           </button>
                         ))
                       ) : (
-                        <p className="text-sm text-slate-500">No products available.</p>
+                        <p className="text-sm text-slate-500">
+                          No products available.
+                        </p>
                       )}
                     </div>
                   </div>
@@ -1304,7 +1446,7 @@ export default function LandingPage({
                       onChange={(e) =>
                         setLoginForm((prev) => ({
                           ...prev,
-                          username: e.target.value.replace(/\s/g, ''),
+                          username: e.target.value.replace(/\s/g, ""),
                         }))
                       }
                       placeholder="Nhập tài khoản (không khoảng trắng)"
@@ -1433,47 +1575,59 @@ export default function LandingPage({
                   </button>
                 </div>
 
-                {cartCount > 0 && currentProduct ? (
+                {cartItems.length > 0 ? (
                   <div className="space-y-4">
-                    <div
-                      className={twMerge(
-                        "p-4 rounded-2xl border flex justify-between items-start",
-                        darkMode
-                          ? "bg-slate-950/40 border-slate-800"
-                          : "bg-slate-50 border-slate-200",
-                      )}
-                    >
-                      <div>
-                        <h4 className="font-semibold text-sm">
-                          {currentProduct.productName}
-                        </h4>
-                        <p className="text-[11px] opacity-60 mt-1">
-                          Config: {selectedColor} / {selectedSize}
-                        </p>
-                        <span className="text-xs font-semibold text-blue-500 block mt-2">
-                          ${currentProduct.price}.00
-                        </span>
+                    {cartItems.map((item) => (
+                      <div
+                        key={item.cartItemId}
+                        className={twMerge(
+                          "p-4 rounded-2xl border flex justify-between items-start gap-4",
+                          darkMode
+                            ? "bg-slate-950/40 border-slate-800"
+                            : "bg-slate-50 border-slate-200",
+                        )}
+                      >
+                        <div className="min-w-0">
+                          <h4 className="font-semibold text-sm truncate">
+                            {item.productName}
+                          </h4>
+                          <p className="text-[11px] opacity-60 mt-1">
+                            Config: {item.selectedColor || "N/A"} /{" "}
+                            {item.selectedSize || "N/A"}
+                          </p>
+                          <span className="text-xs font-semibold text-blue-500 block mt-2">
+                            ${item.price}.00
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 border border-slate-500/20 rounded-lg px-2 py-1 bg-white/5">
+                          <button
+                            onClick={() =>
+                              handleUpdateCartItemQuantity(
+                                item,
+                                (item.quantity || 0) - 1,
+                              )
+                            }
+                            className="p-0.5 opacity-60 hover:opacity-100 cursor-pointer"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="text-xs font-mono px-1">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleUpdateCartItemQuantity(
+                                item,
+                                (item.quantity || 0) + 1,
+                              )
+                            }
+                            className="p-0.5 opacity-60 hover:opacity-100 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 border border-slate-500/20 rounded-lg px-2 py-1 bg-white/5">
-                        <button
-                          onClick={() =>
-                            setCartCount((c) => Math.max(0, c - 1))
-                          }
-                          className="p-0.5 opacity-60 hover:opacity-100 cursor-pointer"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="text-xs font-mono px-1">
-                          {cartCount}
-                        </span>
-                        <button
-                          onClick={() => setCartCount((c) => c + 1)}
-                          className="p-0.5 opacity-60 hover:opacity-100 cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 ) : (
                   <p className="text-xs opacity-50 text-center py-12">
@@ -1485,7 +1639,7 @@ export default function LandingPage({
               <div className="border-t border-slate-500/10 pt-4">
                 <div className="flex justify-between items-center text-sm font-semibold mb-4">
                   <span>Subtotal Architecture Cost</span>
-                  <span>${currentProduct ? cartCount * currentProduct.price : 0}.00</span>
+                  <span>${cartSubtotal.toFixed(2)}</span>
                 </div>
                 <button
                   onClick={() =>
@@ -1751,6 +1905,37 @@ export default function LandingPage({
           </div>
         </motion.div>
       </footer>
+
+      {/* FAVORITES SIDEBAR */}
+      <AnimatePresence>
+        {isFavoritesOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-md z-[70]"
+            onClick={() => setIsFavoritesOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {isFavoritesOpen && (
+          <motion.div
+            initial={{ x: "100%" }}
+            animate={{ x: "0%" }}
+            exit={{ x: "100%" }}
+            transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
+            className="fixed top-0 right-0 bottom-0 z-[71] h-full w-full max-w-md"
+          >
+            <FavoriteProducts
+              favorites={favorites}
+              toggleFavorite={toggleFavorite}
+              darkMode={darkMode}
+              onClose={() => setIsFavoritesOpen(false)}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
