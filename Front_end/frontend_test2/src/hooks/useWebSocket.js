@@ -3,7 +3,9 @@ import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
 // Usually from env var, e.g., import.meta.env.VITE_API_BASE_URL
-const WS_URL = import.meta.env.VITE_WS_BASE_URL || "http://localhost:8080";
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || "localhost:8080";
+const WS_PROTOCOL = window.location.protocol === "https:" ? "wss://" : "ws://";
+const WS_URL = `${WS_PROTOCOL}${WS_BASE_URL}`;
 
 export function useWebSocket() {
   const [stompClient, setStompClient] = useState(null);
