@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, lazy, Suspense } from "react";
 import {
   motion,
   useScroll,
@@ -33,7 +33,7 @@ import {
 import { twMerge } from "tailwind-merge";
 import api from "../api/axios"; // Import the configured axios instance
 import FavoriteProducts from "../components/FavoriteProducts"; // Import FavoriteProducts component
-import NewsletterSubscribe from "../components/NewsletterSubscribe";
+import heroImage from "../assets/hero.png";
 // NotificationBar is handled by App.jsx, no need to import here
 
 // --- DATA: LOGO MARQUEE ---
@@ -80,6 +80,8 @@ const LinkedinIcon = ({ className = "" }) => (
     <path d="M6.94 6.5A1.94 1.94 0 1 1 5 4.56 1.94 1.94 0 0 1 6.94 6.5ZM5.25 8.75h3.38V20H5.25ZM10.13 8.75h3.24v1.54h.05a3.55 3.55 0 0 1 3.2-1.76c3.43 0 4.06 2.26 4.06 5.2V20h-3.38v-5.02c0-1.2-.02-2.75-1.68-2.75-1.69 0-1.95 1.32-1.95 2.66V20h-3.54Z" />
   </svg>
 );
+
+const NewsletterSubscribe = lazy(() => import("../components/NewsletterSubscribe"));
 
 const LOGOS = [
   {
@@ -704,7 +706,7 @@ export default function LandingPage({
         >
           {/* Background Video Layer */}
           <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none opacity-40">
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:72px_72px] opacity-25" />
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:72px_72px] opacity-25" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.12),transparent_30%),radial-gradient(circle_at_80%_15%,rgba(34,197,94,0.08),transparent_22%),radial-gradient(circle_at_70%_80%,rgba(16,185,129,0.08),transparent_20%)]" />
             <video
               src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260505_101331_74f9b798-3f00-4e86-8a01-377aa16ffeaa.mp4"
@@ -712,6 +714,9 @@ export default function LandingPage({
               loop
               muted
               playsInline
+              preload="metadata"
+              poster={heroImage}
+              aria-hidden="true"
               className="w-full h-full object-cover scale-105"
             />
           </div>
@@ -775,24 +780,23 @@ export default function LandingPage({
               className="relative w-[190px] sm:w-[220px] md:w-[240px] h-[380px] sm:h-[430px] md:h-[480px] rounded-[36px] sm:rounded-[48px] shadow-[0_0_0_1px_rgba(255,255,255,0.35),0_24px_70px_rgba(16,185,129,0.22),0_10px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 border border-white/20 bg-white/80 backdrop-blur-sm"
             >
               {/* CHỖ THAY ẢNH ĐIỆN THOẠI CHÍNH (HERO 3D SCROLL IMAGE) */}
-              {currentProduct && (
               <img
                 src={
-                  currentProduct.imageUrl ||
+                  currentProduct?.imageUrl ||
+                  heroImage ||
                   "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1400&auto=format&fit=crop"
                 }
                 alt={
-                  currentProduct.productName ||
+                  currentProduct?.productName ||
                   "Cinematic Ultra Premium Smartphone Hardware Device"
                 }
                 width="240"
                 height="480"
-                loading="lazy"
+                loading="eager"
                 decoding="async"
                 fetchPriority="high"
                 className="w-full h-full object-cover rounded-[36px] sm:rounded-[48px] bg-black brightness-95 contrast-125 saturate-90"
               />
-              )}
               {/* Glow Overlay Ambient Reflection Effect */}
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_48%_44%,rgba(16,185,129,0.34),transparent_28%),radial-gradient(circle_at_60%_58%,rgba(34,197,94,0.22),transparent_20%),radial-gradient(circle_at_40%_28%,rgba(255,255,255,0.06),transparent_18%),linear-gradient(145deg,rgba(255,255,255,0.04),transparent_42%)] pointer-events-none rounded-[36px] sm:rounded-[48px]" />
             </motion.div>
@@ -823,6 +827,10 @@ export default function LandingPage({
               <img
                 src={logo.src}
                 alt={logo.name}
+                width="48"
+                height="48"
+                loading="lazy"
+                decoding="async"
                 className="w-12 h-12 object-contain relative z-10 opacity-70 group-hover:opacity-100 group-hover:brightness-0 group-hover:invert transition-all"
               />
             </div>
@@ -1458,17 +1466,12 @@ export default function LandingPage({
                     <User className="h-4 w-4 text-emerald-400" />
                     <input
                       type="text"
+                      name="username"
                       required
                       value={loginForm.username}
-                      onChange={(e) =>
-                        setLoginForm((prev) => ({
-                          ...prev,
-                          username: e.target.value.replace(/\s/g, ""),
-                        }))
-                      }
+                      onChange={handleInputChange}
                       placeholder="Nhập tài khoản (không khoảng trắng)"
                       className="w-full bg-transparent text-sm outline-none placeholder:text-slate-500"
-                      onChange={handleInputChange}
                       aria-label="Tài khoản"
                     />
                   </div>
@@ -1489,6 +1492,7 @@ export default function LandingPage({
                     <Lock className="h-4 w-4 text-emerald-400" />
                     <input
                       type={showPassword ? "text" : "password"}
+                      name="password"
                       required
                       value={loginForm.password}
                       onChange={handleInputChange}
@@ -1796,7 +1800,9 @@ export default function LandingPage({
       )}
 
       {/* NEWSLETTER SUBSCRIBE SECTION */}
-      <NewsletterSubscribe />
+      <Suspense fallback={null}>
+        <NewsletterSubscribe showNotification={showNotification} />
+      </Suspense>
 
       {/* FOOTER */}
       <footer className="w-full max-w-[1200px] mx-auto px-4 pb-10 sm:pb-14 pt-6 sm:pt-10" aria-labelledby="footer-heading">
