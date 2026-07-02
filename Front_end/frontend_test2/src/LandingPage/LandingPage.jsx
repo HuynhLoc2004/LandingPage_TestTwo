@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useCallback,
-  useMemo,
-} from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   motion,
   useScroll,
@@ -40,6 +34,7 @@ import { twMerge } from "tailwind-merge";
 import api from "../api/axios"; // Import the configured axios instance
 import FavoriteProducts from "../components/FavoriteProducts"; // Import FavoriteProducts component
 import NewsletterSubscribe from "../components/NewsletterSubscribe";
+// NotificationBar is handled by App.jsx, no need to import here
 
 // --- DATA: LOGO MARQUEE ---
 const FacebookIcon = ({ className = "" }) => (
@@ -137,7 +132,6 @@ export default function LandingPage({
   setIsLoading,
   favorites,
   setFavorites,
-  fetchFavorites,
 }) {
   // States quản lý tính năng nâng cao
   const [darkMode, setDarkMode] = useState(true);
@@ -151,84 +145,67 @@ export default function LandingPage({
     username: "",
     password: "",
   });
-  const [products, setProducts] = useState([]); // State to store all product specifications
+  const [products] = useState([]); // State to store all product specifications
   const [currentProduct, setCurrentProduct] = useState(null); // State to store the currently displayed product
+  const [cartCount, setCartCount] = useState(0);
+  const [cartItems, setCartItems] = useState([]);
+  const [selectedColor, setSelectedColor] = useState("Onyx Black");
+  const [selectedSize, setSelectedSize] = useState("Medium");
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+  const [activeSpecTab, setActiveSpecTab] = useState("dimensions");
   const pendingFavoriteIdsRef = useRef(new Set());
   const pendingCartItemIdsRef = useRef(new Set());
 
-  const handleInputChange = (e) => {
+  const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setLoginForm((prev) => ({ ...prev, [name]: value }));
-  };
+  }, [setLoginForm]);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setIsLoading(true); // Set loading to true
-    try {
-      const response = await api.post("/auth/login", loginForm);
-      localStorage.setItem("accessToken", response.data.accessToken);
-      onLoginSuccess();
-      setIsLoginOpen(false);
-      showNotification("Login successful!", "success");
-    } catch (error) {
-      console.error("Login failed:", error);
-      showNotification(
-        error.response?.data?.message || "Login failed!",
-        "error",
-      );
-    } finally {
-      setIsLoading(false); // Set loading to false
-    }
-  };
-
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setIsLoading(true); // Set loading to true
-    try {
-      await api.post("/auth/register", loginForm);
-      showNotification("Registration successful! Please log in.", "success");
-      setAuthMode("login");
-    } catch (error) {
-      console.error("Registration failed:", error);
-      showNotification(
-        error.response?.data?.message || "Registration failed!",
-        "error",
-      );
-    } finally {
-      setIsLoading(false); // Set loading to false
-    }
-  };
-
-  // States cấu hình sản phẩm (E-commerce Mini)
-  const [selectedColor, setSelectedColor] = useState("Onyx Black");
-  const [selectedSize, setSelectedSize] = useState("Medium");
-  const [cartCount, setCartCount] = useState(0);
-  const [cartItems, setCartItems] = useState([]);
-
-  // Form Đăng ký nhận tin state
-  const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
-
-  // Spec Tab State
-  const [activeSpecTab, setActiveSpecTab] = useState("dimensions");
-  const [showBackToTop, setShowBackToTop] = useState(false);
-
-  // Fetch all product details on component mount
-  useEffect(() => {
-    const fetchAllProducts = async () => {
+  const handleLogin = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setIsLoading(true); // Set loading to true
       try {
-        const response = await api.get("/products");
-        setProducts(response.data);
-        if (response.data.length > 0) {
-          setCurrentProduct(response.data[0]); // Set the first product as the current one for display
-        }
+        const response = await api.post("/auth/login", loginForm);
+        localStorage.setItem("accessToken", response.data.accessToken);
+        onLoginSuccess();
+        setIsLoginOpen(false);
+        showNotification("Login successful!", "success");
       } catch (error) {
-        console.error("Error fetching product specifications:", error);
-        showNotification("Failed to load product details.", "error");
+        console.error("Login failed:", error);
+        showNotification(
+          error.response?.data?.message || "Login failed!",
+          "error",
+        );
+      } finally {
+        setIsLoading(false); // Set loading to false
       }
-    };
-    fetchAllProducts();
-  }, []);
+    },
+    [loginForm, onLoginSuccess, setIsLoading, showNotification],
+  );
+
+  const handleRegister = useCallback(
+    async (e) => {
+      e.preventDefault();
+      setIsLoading(true); // Set loading to true
+      try {
+        await api.post("/auth/register", loginForm);
+        showNotification("Registration successful! Please log in.", "success");
+        setAuthMode("login");
+      } catch (error) {
+        console.error("Registration failed:", error);
+        showNotification(
+          error.response?.data?.message || "Registration failed!",
+          "error",
+        );
+      } finally {
+        setIsLoading(false); // Set loading to false
+      }
+    },
+    [loginForm, setIsLoading, showNotification, setAuthMode],
+  );
 
   useEffect(() => {
     const openLoginForm = () => {
@@ -240,7 +217,7 @@ export default function LandingPage({
     window.addEventListener("auth:login-required", openLoginForm);
     return () =>
       window.removeEventListener("auth:login-required", openLoginForm);
-  }, [showNotification]); // Removed handleInputChange from dependency array
+  }, [showNotification, setAuthMode, setIsLoginOpen]);
 
   // Tracking Scroll để làm hiệu ứng Điện thoại 3D lướt lên & nghiêng góc
   const heroRef = useRef(null);
@@ -326,9 +303,9 @@ export default function LandingPage({
   const headerX = useTransform(scrollYProgress, [0, 1], [0, 10]);
   const headerY = useTransform(scrollYProgress, [0, 1], [0, -2]);
 
-  const toggleDarkMode = () => setDarkMode(!darkMode);
+  const toggleDarkMode = useCallback(() => setDarkMode(!darkMode), [darkMode]);
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = useCallback(async () => {
     if (!currentProduct) {
       showNotification(
         "Product details not loaded yet. Please try again.",
@@ -375,110 +352,156 @@ export default function LandingPage({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [
+    currentProduct,
+    isLoggedIn,
+    selectedColor,
+    selectedSize,
+    setAuthMode,
+    setIsLoginOpen,
+    showNotification,
+    setIsLoading,
+    setCartCount,
+    setCartItems,
+    setIsCartOpen,
+  ]);
 
-  const handleUpdateCartItemQuantity = async (cartItem, nextQuantity) => {
-    if (!cartItem?.cartItemId) return;
-    if (pendingCartItemIdsRef.current.has(cartItem.cartItemId)) return;
+  const handleUpdateCartItemQuantity = useCallback(
+    async (cartItem, nextQuantity) => {
+      if (!cartItem?.cartItemId) return;
+      if (pendingCartItemIdsRef.current.has(cartItem.cartItemId)) return;
 
-    pendingCartItemIdsRef.current.add(cartItem.cartItemId);
+      pendingCartItemIdsRef.current.add(cartItem.cartItemId);
 
-    const previousItems = [...cartItems];
-    const previousCount = cartCount;
+      const previousItems = [...cartItems];
+      const previousCount = cartCount;
 
-    const optimisticItems =
-      nextQuantity <= 0
-        ? cartItems.filter((item) => item.cartItemId !== cartItem.cartItemId)
-        : cartItems.map((item) =>
-            item.cartItemId === cartItem.cartItemId
-              ? { ...item, quantity: nextQuantity }
-              : item,
-          );
-
-    setCartItems(optimisticItems);
-    setCartCount(
-      optimisticItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
-    );
-
-    try {
-      const response =
+      const optimisticItems =
         nextQuantity <= 0
-          ? await api.delete(`/cart/items/${cartItem.cartItemId}`)
-          : await api.put(`/cart/items/${cartItem.cartItemId}`, {
-              quantity: nextQuantity,
-            });
+          ? cartItems.filter((item) => item.cartItemId !== cartItem.cartItemId)
+          : cartItems.map((item) =>
+              item.cartItemId === cartItem.cartItemId
+                ? { ...item, quantity: nextQuantity }
+                : item,
+            );
 
-      setCartItems(response.data?.items || []);
-      setCartCount(response.data?.totalQuantity || 0);
-      if (nextQuantity <= 0) {
-        showNotification("Removed item from cart", "info");
+      setCartItems(optimisticItems);
+      setCartCount(
+        optimisticItems.reduce((sum, item) => sum + (item.quantity || 0), 0),
+      );
+
+      try {
+        const response =
+          nextQuantity <= 0
+            ? await api.delete(`/cart/items/${cartItem.cartItemId}`)
+            : await api.put(`/cart/items/${cartItem.cartItemId}`, {
+                quantity: nextQuantity,
+              });
+
+        setCartItems(response.data?.items || []);
+        setCartCount(response.data?.totalQuantity || 0);
+        if (nextQuantity <= 0) {
+          showNotification("Removed item from cart", "info");
+        }
+      } catch (error) {
+        console.error("Update cart quantity failed:", error);
+        setCartItems(previousItems);
+        setCartCount(previousCount);
+        if (error.response?.status === 401) {
+          setAuthMode("login");
+          setIsLoginOpen(true);
+          showNotification("Please log in again before updating cart.", "info");
+        } else {
+          showNotification(
+            error.response?.data?.message || "Failed to update cart.",
+            "error",
+          );
+        }
+      } finally {
+        pendingCartItemIdsRef.current.delete(cartItem.cartItemId);
       }
-    } catch (error) {
-      console.error("Update cart quantity failed:", error);
-      setCartItems(previousItems);
-      setCartCount(previousCount);
-      if (error.response?.status === 401) {
-        setAuthMode("login");
-        setIsLoginOpen(true);
-        showNotification("Please log in again before updating cart.", "info");
-      } else {
-        showNotification(
-          error.response?.data?.message || "Failed to update cart.",
-          "error",
-        );
+    },
+    [
+      cartItems,
+      cartCount,
+      showNotification,
+      setAuthMode,
+      setIsLoginOpen,
+      setCartItems,
+      setCartCount,
+    ],
+  );
+
+  const toggleFavorite = useCallback(
+    async (productId) => {
+      if (!isLoggedIn) {
+        showNotification("Please log in to add favorites.", "info");
+        return;
       }
-    } finally {
-      pendingCartItemIdsRef.current.delete(cartItem.cartItemId);
-    }
-  };
 
-  const toggleFavorite = async (productId) => {
-    if (!isLoggedIn) {
-      showNotification("Please log in to add favorites.", "info");
-      return;
-    }
-
-    if (pendingFavoriteIdsRef.current.has(productId)) {
-      return;
-    }
-
-    pendingFavoriteIdsRef.current.add(productId);
-
-    // Save previous state for rollback
-    const previousFavorites = [...favorites];
-
-    // Optimistic Update
-    const isFav = favorites.some((p) => p.productId === productId);
-    if (isFav) {
-      // Optimistically remove from favorites state
-      setFavorites(favorites.filter((p) => p.productId !== productId));
-      // Show notification immediately
-      showNotification("Removed from favorites", "info");
-    } else {
-      // Optimistically add to favorites state
-      const productToAdd = products.find((p) => p.productId === productId);
-      if (productToAdd) {
-        setFavorites([...favorites, productToAdd]);
+      if (pendingFavoriteIdsRef.current.has(productId)) {
+        return;
       }
-      // Show notification immediately
-      showNotification("Added to favorites", "success");
-    }
 
-    try {
+      pendingFavoriteIdsRef.current.add(productId);
+
+      // Save previous state for rollback
+      const previousFavorites = [...favorites];
+
+      // Optimistic Update
+      const isFav = favorites.some((p) => p.productId === productId);
       if (isFav) {
-        await api.post(`/favorites/remove?productId=${productId}`);
+        // Optimistically remove from favorites state
+        setFavorites(favorites.filter((p) => p.productId !== productId));
+        // Show notification immediately
+        showNotification("Removed from favorites", "info");
       } else {
-        await api.post(`/favorites/add?productId=${productId}`);
+        // Optimistically add to favorites state
+        const productToAdd = products.find((p) => p.productId === productId);
+        if (productToAdd) {
+          setFavorites([...favorites, productToAdd]);
+        }
+        // Show notification immediately
+        showNotification("Added to favorites", "success");
       }
-    } catch (error) {
-      console.error("Favorite toggle failed:", error);
-      showNotification("Failed to update favorites.", "error");
-      // Rollback to previous state on failure
-      setFavorites(previousFavorites);
-    } finally {
-      pendingFavoriteIdsRef.current.delete(productId);
+
+      try {
+        if (isFav) {
+          await api.post(`/favorites/remove?productId=${productId}`);
+        } else {
+          await api.post(`/favorites/add?productId=${productId}`);
+        }
+      } catch (error) {
+        console.error("Favorite toggle failed:", error);
+        showNotification("Failed to update favorites.", "error");
+        // Rollback to previous state on failure
+        setFavorites(previousFavorites);
+      } finally {
+        pendingFavoriteIdsRef.current.delete(productId);
+      }
+    },
+    [isLoggedIn, showNotification, favorites, setFavorites, products],
+  );
+
+  const productButtons = useMemo(() => {
+    if (!Array.isArray(products) || products.length === 0) {
+      return <p className="text-sm text-slate-500">No products available.</p>;
     }
-  };
+    return products.map((product) => (
+      <button
+        key={product.productId}
+        onClick={() => setCurrentProduct(product)}
+        className={twMerge(
+          "cursor-pointer text-xs px-4 py-2 rounded-full border transition-all duration-300 font-medium",
+          currentProduct?.productId === product.productId
+            ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
+            : "border-slate-500/20 hover:border-slate-500/40",
+        )}
+      >
+        {product.productName}
+      </button>
+    ));
+  }, [products, currentProduct]);
 
   const cartSubtotal = useMemo(() => {
     return cartItems.reduce(
@@ -1146,30 +1169,7 @@ export default function LandingPage({
                     <label className="text-[11px] font-bold uppercase tracking-[0.22em] opacity-60 block mb-3">
                       Choose Product
                     </label>
-                    <div className="flex flex-wrap gap-2">
-                      {Array.isArray(products) && products.length > 0 ? (
-                        useMemo(() => {
-                          return products.map((product) => (
-                            <button
-                              key={product.productId}
-                              onClick={() => setCurrentProduct(product)}
-                              className={twMerge(
-                                "cursor-pointer text-xs px-4 py-2 rounded-full border transition-all duration-300 font-medium",
-                                currentProduct?.productId === product.productId
-                                  ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
-                                  : "border-slate-500/20 hover:border-slate-500/40",
-                              )}
-                            >
-                              {product.productName}
-                            </button>
-                          ));
-                        }, [products, currentProduct, darkMode])
-                      ) : (
-                        <p className="text-sm text-slate-500">
-                          No products available.
-                        </p>
-                      )}
-                    </div>
+                    <div className="flex flex-wrap gap-2">{productButtons}</div>
                   </div>
                   <div>
                     <label className="text-[11px] font-bold uppercase tracking-[0.22em] opacity-60 block mb-3">
@@ -1459,6 +1459,7 @@ export default function LandingPage({
                       }
                       placeholder="Nhập tài khoản (không khoảng trắng)"
                       className="w-full bg-transparent text-sm outline-none placeholder:text-slate-500"
+                      onChange={handleInputChange}
                     />
                   </div>
                 </label>
@@ -1480,12 +1481,7 @@ export default function LandingPage({
                       type={showPassword ? "text" : "password"}
                       required
                       value={loginForm.password}
-                      onChange={(e) =>
-                        setLoginForm((prev) => ({
-                          ...prev,
-                          password: e.target.value,
-                        }))
-                      }
+                      onChange={handleInputChange}
                       placeholder="Tối thiểu 6 ký tự, hoa, thường, số, đặc biệt"
                       className="w-full bg-transparent text-sm outline-none placeholder:text-slate-500"
                     />

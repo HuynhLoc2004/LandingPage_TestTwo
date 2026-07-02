@@ -1,4 +1,3 @@
-import React from "react";
 import { X, Heart, Trash2, Cpu, Wifi, Layers } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 

@@ -28,7 +28,7 @@ function AppContent() {
             console.error("Failed to fetch favorites:", error);
             // Don't show a notification for this, as it might be noisy
         }
-    }, [isLoggedIn]);
+    }, [isLoggedIn, setFavorites]);
 
     const handleLogout = useCallback(async () => {
         setIsLoading(true);

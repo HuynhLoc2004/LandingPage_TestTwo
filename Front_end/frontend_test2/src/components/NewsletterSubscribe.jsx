@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, BellRing, Trash2, CheckCircle2 } from 'lucide-react';
 import OtpModal from './OtpModal';
