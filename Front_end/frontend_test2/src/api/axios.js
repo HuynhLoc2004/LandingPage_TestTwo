@@ -1,5 +1,12 @@
 import axios from 'axios';
-import { API_BASE_URL } from '../config/env';
+import { API_BASE_URL, DEBUG_API, IS_PRODUCTION } from '../config/env';
+
+const shouldLogApi = DEBUG_API || !IS_PRODUCTION;
+
+const dispatchAuthEvent = (type) => {
+  window.dispatchEvent(new CustomEvent(type));
+  window.dispatchEvent(new CustomEvent('auth:changed'));
+};
 
 const buildFullUrl = (config) => {
   const requestUrl = config?.url || '';
@@ -13,6 +20,8 @@ const buildFullUrl = (config) => {
 };
 
 const logApiError = (error) => {
+  if (!shouldLogApi) return;
+
   const status = error.response?.status ?? 'NO_RESPONSE';
   const url = buildFullUrl(error.config || {});
   const message = error.message || 'Unknown error';
@@ -38,10 +47,12 @@ instance.interceptors.request.use((config) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  console.log('[API REQUEST]', {
-    method: (config.method || 'GET').toUpperCase(),
-    url: buildFullUrl(config),
-  });
+  if (shouldLogApi) {
+    console.log('[API REQUEST]', {
+      method: (config.method || 'GET').toUpperCase(),
+      url: buildFullUrl(config),
+    });
+  }
 
   return config;
 });
@@ -65,18 +76,22 @@ instance.interceptors.response.use(
         const { accessToken } = response.data;
 
         localStorage.setItem('accessToken', accessToken);
+        dispatchAuthEvent('auth:login');
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
-        console.log('[API REQUEST]', {
-          method: (originalRequest.method || 'GET').toUpperCase(),
-          url: buildFullUrl(originalRequest),
-          retry: true,
-        });
+        if (shouldLogApi) {
+          console.log('[API REQUEST]', {
+            method: (originalRequest.method || 'GET').toUpperCase(),
+            url: buildFullUrl(originalRequest),
+            retry: true,
+          });
+        }
 
         return instance(originalRequest);
       } catch (refreshError) {
         logApiError(refreshError);
         localStorage.removeItem('accessToken');
+        dispatchAuthEvent('auth:logout');
         window.dispatchEvent(new CustomEvent('auth:login-required'));
         return Promise.reject(refreshError);
       }

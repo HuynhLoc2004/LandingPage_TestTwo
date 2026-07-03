@@ -224,6 +224,36 @@ export default function LandingPage({
   useEffect(() => {
     let isMounted = true;
 
+    if (!isLoggedIn) {
+      setCartCount(0);
+      setCartItems([]);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    const fetchCart = async () => {
+      try {
+        const response = await api.get("/cart");
+        if (!isMounted) return;
+
+        setCartCount(response.data?.totalQuantity || 0);
+        setCartItems(response.data?.items || []);
+      } catch (error) {
+        console.error("Failed to fetch cart:", error);
+      }
+    };
+
+    fetchCart();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isLoggedIn]);
+
+  useEffect(() => {
+    let isMounted = true;
+
     const fetchProducts = async () => {
       try {
         const response = await api.get("/products");

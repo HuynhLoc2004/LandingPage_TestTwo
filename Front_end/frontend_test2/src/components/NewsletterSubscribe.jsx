@@ -76,17 +76,15 @@ export default function NewsletterSubscribe({ showNotification }) {
 
     // Lắng nghe qua custom event và storage (nếu thao tác ở tab khác)
     window.addEventListener('storage', checkTokenChange);
-    window.addEventListener('login', checkTokenChange);
-    window.addEventListener('logout', checkTokenChange);
-    
-    // Fallback: Check mỗi 0.2 giây (200ms) để nhận diện siêu nhanh mà không lag trình duyệt
-    const interval = setInterval(checkTokenChange, 200);
+    window.addEventListener('auth:changed', checkTokenChange);
+    window.addEventListener('auth:login', checkTokenChange);
+    window.addEventListener('auth:logout', checkTokenChange);
 
     return () => {
       window.removeEventListener('storage', checkTokenChange);
-      window.removeEventListener('login', checkTokenChange);
-      window.removeEventListener('logout', checkTokenChange);
-      clearInterval(interval);
+      window.removeEventListener('auth:changed', checkTokenChange);
+      window.removeEventListener('auth:login', checkTokenChange);
+      window.removeEventListener('auth:logout', checkTokenChange);
     };
   }, []);
 

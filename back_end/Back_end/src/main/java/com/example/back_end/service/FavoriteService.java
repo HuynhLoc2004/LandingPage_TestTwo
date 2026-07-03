@@ -31,7 +31,7 @@ public class FavoriteService {
         ProductSpec product = productSpecRepository.findById(productId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Product not found"));
 
-        FavoriteList favoriteList = favoriteListRepository.findByUser(user)
+        FavoriteList favoriteList = favoriteListRepository.findByUserIdWithProducts(userId)
                 .orElseGet(() -> {
                     FavoriteList newFavoriteList = FavoriteList.builder().user(user).build();
                     user.setFavoriteList(newFavoriteList); // Set the favorite list for the user
@@ -50,18 +50,19 @@ public class FavoriteService {
         ProductSpec product = productSpecRepository.findById(productId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Product not found"));
 
-        FavoriteList favoriteList = favoriteListRepository.findByUser(user)
+        FavoriteList favoriteList = favoriteListRepository.findByUserIdWithProducts(userId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Favorite list not found for user"));
 
         favoriteList.getProducts().remove(product);
         return favoriteListRepository.save(favoriteList);
     }
 
+    @Transactional(readOnly = true)
     public Set<ProductSpec> getFavoriteList(Long userId) {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
-        return favoriteListRepository.findByUser(user)
+        return favoriteListRepository.findByUserIdWithProducts(user.getId())
                 .map(FavoriteList::getProducts)
                 .orElse(java.util.Collections.emptySet());
     }

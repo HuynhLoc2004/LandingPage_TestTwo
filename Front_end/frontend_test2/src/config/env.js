@@ -55,7 +55,10 @@ export const API_BASE_URL = normalizeUrl(
 );
 export const WS_BASE_URL = normalizeWebSocketUrl(import.meta.env.VITE_WS_BASE_URL);
 export const IS_PRODUCTION = import.meta.env.MODE === 'production';
+export const DEBUG_API = import.meta.env.VITE_DEBUG_API === 'true';
 
-console.log('[ENV] MODE:', import.meta.env.MODE);
-console.log('[ENV] API_BASE_URL:', API_BASE_URL);
-console.log('[ENV] WS_BASE_URL:', WS_BASE_URL);
+if (!IS_PRODUCTION || DEBUG_API) {
+  console.log('[ENV] MODE:', import.meta.env.MODE);
+  console.log('[ENV] API_BASE_URL:', API_BASE_URL);
+  console.log('[ENV] WS_BASE_URL:', WS_BASE_URL);
+}

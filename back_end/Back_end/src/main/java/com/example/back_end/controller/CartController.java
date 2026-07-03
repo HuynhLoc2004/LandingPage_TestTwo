@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -24,6 +25,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class CartController {
 
     private final CartService cartService;
+
+    @GetMapping
+    public ResponseEntity<CartResponse> getCart(
+            @AuthenticationPrincipal UserEntity currentUser
+    ) {
+        if (currentUser == null) {
+            throw new AppException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        return ResponseEntity.ok(cartService.getCart(currentUser.getId()));
+    }
 
     @PostMapping("/add")
     public ResponseEntity<CartResponse> addProductToCart(

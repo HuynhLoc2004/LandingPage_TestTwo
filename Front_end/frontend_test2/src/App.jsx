@@ -7,6 +7,11 @@ import api from "./api/axios";
 
 const OrderDashboard = lazy(() => import("./OrderDashboard/OrderDashboard"));
 
+const dispatchAuthEvent = (type) => {
+    window.dispatchEvent(new CustomEvent(type));
+    window.dispatchEvent(new CustomEvent("auth:changed"));
+};
+
 function AppContent() {
     const [notification, setNotification] = React.useState(null);
     const [isLoggedIn, setIsLoggedIn] = React.useState(!!localStorage.getItem("accessToken"));
@@ -20,7 +25,7 @@ function AppContent() {
     }, []);
 
     const fetchFavorites = useCallback(async () => {
-        if (!isLoggedIn) return;
+        if (!localStorage.getItem("accessToken")) return;
         try {
             const response = await api.get("/favorites");
             setFavorites(response.data || []);
@@ -28,7 +33,7 @@ function AppContent() {
             console.error("Failed to fetch favorites:", error);
             // Don't show a notification for this, as it might be noisy
         }
-    }, [isLoggedIn, setFavorites]);
+    }, [setFavorites]);
 
     const handleLogout = useCallback(async () => {
         setIsLoading(true);
@@ -40,6 +45,7 @@ function AppContent() {
             showNotification("Logout failed!", "error");
         } finally {
             localStorage.removeItem("accessToken");
+            dispatchAuthEvent("auth:logout");
             setIsLoggedIn(false);
             setFavorites([]);
             setIsLoading(false);
@@ -75,6 +81,7 @@ function AppContent() {
                         try {
                             const response = await api.post("/auth/refresh-token", {}, { withCredentials: true });
                             localStorage.setItem("accessToken", response.data.accessToken);
+                            dispatchAuthEvent("auth:login");
                             setupRefreshTokenTimerRef.current(); // Call via ref
                         } catch (error) {
                             console.error("Failed to refresh token:", error);
@@ -88,6 +95,7 @@ function AppContent() {
                         try {
                             const response = await api.post("/auth/refresh-token", {}, { withCredentials: true });
                             localStorage.setItem("accessToken", response.data.accessToken);
+                            dispatchAuthEvent("auth:login");
                             setupRefreshTokenTimerRef.current(); // Call via ref
                         } catch (error) {
                             console.error("Failed to refresh token:", error);
@@ -128,8 +136,8 @@ function AppContent() {
 
     const handleLoginSuccess = () => {
         setIsLoggedIn(true);
+        dispatchAuthEvent("auth:login");
         showNotification("Login successful!", "success");
-        fetchFavorites();
         setupRefreshTokenTimerRef.current(); // Start refresh timer on successful login
     };
 

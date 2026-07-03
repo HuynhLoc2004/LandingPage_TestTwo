@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,6 +28,16 @@ public class CartService {
     private final CartRepository cartRepository;
     private final UserRepository userRepository;
     private final ProductSpecRepository productSpecRepository;
+
+    @Transactional(readOnly = true)
+    public CartResponse getCart(Long userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
+
+        return cartRepository.findByUserIdWithItems(userId)
+                .map(cart -> toCartResponse(cart, "Cart loaded successfully"))
+                .orElseGet(() -> emptyCartResponse(user.getId()));
+    }
 
     @Transactional
     public CartResponse addProductToCart(Long userId, AddToCartRequest request) {
@@ -40,7 +51,7 @@ public class CartService {
         ProductSpec product = productSpecRepository.findById(request.getProductId())
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Product not found"));
 
-        Cart cart = cartRepository.findByUser(user)
+        Cart cart = cartRepository.findByUserIdWithItems(userId)
                 .orElseGet(() -> {
                     Cart newCart = Cart.builder().user(user).build();
                     user.setCart(newCart);
@@ -78,7 +89,7 @@ public class CartService {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
-        Cart cart = cartRepository.findByUser(user)
+        Cart cart = cartRepository.findByUserIdWithItems(userId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Cart not found for user"));
 
         CartItem cartItem = cart.getItems().stream()
@@ -109,7 +120,7 @@ public class CartService {
         UserEntity user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "User not found"));
 
-        Cart cart = cartRepository.findByUser(user)
+        Cart cart = cartRepository.findByUserIdWithItems(userId)
                 .orElseThrow(() -> new AppException(HttpStatus.NOT_FOUND, "Cart not found for user"));
 
         cart.getItems().removeIf(item -> Objects.equals(item.getId(), cartItemId));
@@ -147,6 +158,16 @@ public class CartService {
                 .totalQuantity(totalQuantity)
                 .subtotal(subtotal)
                 .message(message)
+                .build();
+    }
+
+    private CartResponse emptyCartResponse(Long userId) {
+        return CartResponse.builder()
+                .userId(userId)
+                .items(Collections.emptyList())
+                .totalQuantity(0)
+                .subtotal(0.0)
+                .message("Cart is empty")
                 .build();
     }
 
