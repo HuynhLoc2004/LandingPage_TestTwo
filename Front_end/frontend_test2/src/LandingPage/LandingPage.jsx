@@ -157,6 +157,14 @@ export default function LandingPage({
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [activeSpecTab, setActiveSpecTab] = useState("dimensions");
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState([
+    {
+      role: "assistant",
+      text: "Xin chào! Tôi có thể hỗ trợ gì về thông số sản phẩm, giỏ hàng hoặc mục yêu thích của bạn không?",
+    },
+  ]);
+  const [isChatSending, setIsChatSending] = useState(false);
   const pendingFavoriteIdsRef = useRef(new Set());
   const pendingCartItemIdsRef = useRef(new Set());
 
@@ -186,6 +194,42 @@ export default function LandingPage({
       }
     },
     [loginForm, onLoginSuccess, setIsLoading, showNotification],
+  );
+
+  const handleChatSubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+
+      const message = chatInput.trim();
+      if (!message || isChatSending) return;
+
+      setChatInput("");
+      setChatMessages((current) => [...current, { role: "user", text: message }]);
+      setIsChatSending(true);
+
+      try {
+        const response = await api.post("/api/chat", { message });
+        const answer =
+          response.data?.answer ||
+          "Mình chưa nhận được phản hồi phù hợp, bạn thử hỏi lại giúp mình nha.";
+
+        setChatMessages((current) => [...current, { role: "assistant", text: answer }]);
+      } catch (error) {
+        console.error("Chat request failed:", error);
+        setChatMessages((current) => [
+          ...current,
+          {
+            role: "assistant",
+            text:
+              error.response?.data?.message ||
+              "Hiện tại AI chat chưa phản hồi được. Bạn kiểm tra Gemini API key hoặc thử lại sau nha.",
+          },
+        ]);
+      } finally {
+        setIsChatSending(false);
+      }
+    },
+    [chatInput, isChatSending],
   );
 
   const handleRegister = useCallback(
@@ -1783,25 +1827,64 @@ export default function LandingPage({
                   : "bg-slate-50/70",
               )}
             >
-              <div className="flex items-start gap-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.22),rgba(34,197,94,0.10))] border border-emerald-400/15 text-emerald-300">
-                  <Bot className="w-4 h-4" />
+              {chatMessages.map((message, index) => {
+                const isUser = message.role === "user";
+
+                return (
+                  <div
+                    key={`${message.role}-${index}`}
+                    className={twMerge(
+                      "flex items-start gap-3",
+                      isUser && "justify-end",
+                    )}
+                  >
+                    {!isUser && (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.22),rgba(34,197,94,0.10))] border border-emerald-400/15 text-emerald-300">
+                        <Bot className="w-4 h-4" />
+                      </div>
+                    )}
+                    <div
+                      className={twMerge(
+                        "max-w-[85%] whitespace-pre-wrap rounded-3xl border px-4 py-3 shadow-sm leading-relaxed",
+                        isUser
+                          ? "rounded-tr-md bg-blue-600 text-white border-blue-500/60"
+                          : darkMode
+                            ? "rounded-tl-md bg-white/6 border-white/10 text-slate-100 backdrop-blur-md"
+                            : "rounded-tl-md bg-white border-slate-100 text-slate-700",
+                      )}
+                    >
+                      {message.text}
+                    </div>
+                    {isUser && (
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-blue-600/15 border border-blue-400/20 text-blue-300">
+                        <User className="w-4 h-4" />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {isChatSending && (
+                <div className="flex items-start gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.22),rgba(34,197,94,0.10))] border border-emerald-400/15 text-emerald-300">
+                    <Bot className="w-4 h-4" />
+                  </div>
+                  <div
+                    className={twMerge(
+                      "max-w-[85%] rounded-3xl rounded-tl-md border px-4 py-3 shadow-sm leading-relaxed",
+                      darkMode
+                        ? "bg-white/6 border-white/10 text-slate-100 backdrop-blur-md"
+                        : "bg-white border-slate-100 text-slate-700",
+                    )}
+                  >
+                    Đang đọc dữ liệu và suy nghĩ...
+                  </div>
                 </div>
-                <div
-                  className={twMerge(
-                    "max-w-[85%] rounded-3xl rounded-tl-md border px-4 py-3 shadow-sm leading-relaxed",
-                    darkMode
-                      ? "bg-white/6 border-white/10 text-slate-100 backdrop-blur-md"
-                      : "bg-white border-slate-100 text-slate-700",
-                  )}
-                >
-                  Xin chào! Tôi có thể hỗ trợ gì về thông số phần cứng, kết nối
-                  API gRPC hay cấu hình cho hệ thống của ông không?
-                </div>
-              </div>
+              )}
             </div>
 
-            <div
+            <form
+              onSubmit={handleChatSubmit}
               className={twMerge(
                 "p-3 border-t flex gap-2",
                 darkMode
@@ -1813,7 +1896,10 @@ export default function LandingPage({
               <input
                 id="chat-input"
                 type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
                 placeholder="Ask about specifications..."
+                disabled={isChatSending}
                 className={twMerge(
                   "flex-1 border rounded-2xl px-3 py-2.5 text-xs focus:outline-none focus:border-emerald-400 transition-colors",
                   darkMode
@@ -1821,11 +1907,15 @@ export default function LandingPage({
                     : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400",
                 )}
               />
-              <button className="bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#0f766e)] text-white p-2.5 rounded-2xl hover:opacity-95 cursor-pointer shadow-[0_10px_24px_rgba(29,78,216,0.22)] transition-all active:scale-95"
-              aria-label="Send message">
+              <button
+                type="submit"
+                disabled={!chatInput.trim() || isChatSending}
+                className="bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#0f766e)] text-white p-2.5 rounded-2xl hover:opacity-95 cursor-pointer shadow-[0_10px_24px_rgba(29,78,216,0.22)] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Send message"
+              >
                 <ChevronRight className="w-4 h-4" />
               </button>
-            </div>
+            </form>
           </motion.div>
         )}
       </AnimatePresence>
