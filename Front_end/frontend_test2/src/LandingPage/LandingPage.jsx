@@ -1790,7 +1790,7 @@ export default function LandingPage({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className={twMerge(
-              "fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-3 sm:right-6 w-[calc(100vw-1.5rem)] max-w-96 h-[70vh] max-h-[480px] rounded-3xl shadow-2xl border flex flex-col overflow-hidden z-50 font-sans",
+              "fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-3 right-3 sm:left-auto sm:right-6 sm:w-96 h-[min(70vh,480px)] rounded-3xl shadow-2xl border flex flex-col overflow-hidden z-50 font-sans",
               darkMode
                 ? "bg-slate-900 border-slate-800 shadow-black/40"
                 : "bg-white border-slate-200 shadow-slate-200/60",
@@ -1886,7 +1886,7 @@ export default function LandingPage({
             <form
               onSubmit={handleChatSubmit}
               className={twMerge(
-                "p-3 border-t flex gap-2",
+                "p-3 border-t flex w-full min-w-0 gap-2",
                 darkMode
                   ? "border-white/10 bg-[linear-gradient(180deg,rgba(8,14,20,0.92),rgba(10,18,26,0.98))]"
                   : "border-slate-200/70 bg-white/80",
@@ -1901,7 +1901,7 @@ export default function LandingPage({
                 placeholder="Ask about specifications..."
                 disabled={isChatSending}
                 className={twMerge(
-                  "flex-1 border rounded-2xl px-3 py-2.5 text-xs focus:outline-none focus:border-emerald-400 transition-colors",
+                  "min-w-0 flex-1 border rounded-2xl px-3 py-3 text-xs focus:outline-none focus:border-emerald-400 transition-colors",
                   darkMode
                     ? "bg-slate-950/70 border-white/10 text-white placeholder:text-slate-500"
                     : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400",
@@ -1910,7 +1910,7 @@ export default function LandingPage({
               <button
                 type="submit"
                 disabled={!chatInput.trim() || isChatSending}
-                className="bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#0f766e)] text-white p-2.5 rounded-2xl hover:opacity-95 cursor-pointer shadow-[0_10px_24px_rgba(29,78,216,0.22)] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex h-11 w-11 shrink-0 items-center justify-center bg-[linear-gradient(135deg,#0f172a,#1d4ed8,#0f766e)] text-white rounded-2xl hover:opacity-95 cursor-pointer shadow-[0_10px_24px_rgba(29,78,216,0.22)] transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label="Send message"
               >
                 <ChevronRight className="w-4 h-4" />

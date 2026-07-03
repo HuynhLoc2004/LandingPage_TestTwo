@@ -23,6 +23,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -68,92 +71,183 @@ public class GeminiChatService {
             throw new AppException(HttpStatus.SERVICE_UNAVAILABLE, "Gemini API key is missing");
         }
 
-        String context = buildDatabaseContext(currentUser);
-        return askGemini(context, message);
+        List<Map<String, Object>> toolResults = runToolsForMessage(message, currentUser);
+        return askGemini(toolResults, message);
     }
 
-    private String buildDatabaseContext(UserEntity currentUser) {
-        StringBuilder context = new StringBuilder();
-        context.append("DATABASE CONTEXT\n");
-        context.append("Products available in the shop:\n");
+    private List<Map<String, Object>> runToolsForMessage(String message, UserEntity currentUser) {
+        String normalizedMessage = normalize(message);
+        List<Map<String, Object>> results = new ArrayList<>();
 
-        List<ProductSpec> products = productSpecRepository.findAll()
+        boolean asksFavorites = containsAny(normalizedMessage,
+                "favorite", "favorites", "favourite", "yeu thich", "yeuthich", "yêu thích", "muc yeu thich", "wishlist");
+        boolean asksCart = containsAny(normalizedMessage,
+                "cart", "gio hang", "giỏ hàng", "giohang", "shopping cart", "bag", "quantity", "so luong", "số lượng");
+        boolean asksProducts = containsAny(normalizedMessage,
+                "product", "products", "san pham", "sản phẩm", "price", "gia", "giá", "spec", "thong so", "thông số",
+                "recommend", "tu van", "tư vấn", "chip", "wireless", "protocol", "size", "kich thuoc", "kích thước");
+
+        if (asksCart) {
+            results.add(getCartToolResult(currentUser));
+        }
+
+        if (asksFavorites) {
+            results.add(getFavoritesToolResult(currentUser));
+        }
+
+        if (asksProducts || (!asksCart && !asksFavorites)) {
+            results.add(getProductsToolResult());
+        }
+
+        if (currentUser != null && containsAny(normalizedMessage, "toi", "tôi", "minh", "mình", "account", "profile", "user")) {
+            results.add(getUserToolResult(currentUser));
+        }
+
+        return results;
+    }
+
+    private Map<String, Object> getProductsToolResult() {
+        List<Map<String, Object>> products = productSpecRepository.findAll()
                 .stream()
                 .limit(MAX_PRODUCTS_IN_CONTEXT)
+                .map(this::productToMap)
                 .toList();
 
-        if (products.isEmpty()) {
-            context.append("- No products found.\n");
-        } else {
-            products.forEach(product -> context
-                    .append("- ID ").append(product.getProductId())
-                    .append(": ").append(nullSafe(product.getProductName()))
-                    .append(", price ").append(product.getPrice())
-                    .append(", size H/W/D mm ")
-                    .append(product.getHeightMm()).append("/")
-                    .append(product.getWidthMm()).append("/")
-                    .append(product.getDepthMm())
-                    .append(", wireless network: ").append(nullSafe(product.getWirelessNetwork()))
-                    .append(", protocols: ").append(nullSafe(product.getProtocols()))
-                    .append(", chipset: ").append(nullSafe(product.getChipsetArch()))
-                    .append(", cores: ").append(nullSafe(product.getCoresMatrix()))
-                    .append("\n"));
-        }
-
-        if (currentUser == null) {
-            context.append("Current user: guest, no cart or favorites available.\n");
-            return context.toString();
-        }
-
-        Long userId = currentUser.getId();
-        context.append("Current user ID: ").append(userId).append("\n");
-
-        Optional<Cart> cart = cartRepository.findByUserIdWithItems(userId);
-        context.append("Current cart:\n");
-        if (cart.isEmpty() || cart.get().getItems().isEmpty()) {
-            context.append("- Empty\n");
-        } else {
-            for (CartItem item : cart.get().getItems()) {
-                ProductSpec product = item.getProduct();
-                context.append("- ")
-                        .append(nullSafe(product.getProductName()))
-                        .append(", quantity ").append(item.getQuantity())
-                        .append(", color ").append(nullSafe(item.getSelectedColor()))
-                        .append(", size ").append(nullSafe(item.getSelectedSize()))
-                        .append(", price ").append(product.getPrice())
-                        .append("\n");
-            }
-        }
-
-        Optional<FavoriteList> favoriteList = favoriteListRepository.findByUserIdWithProducts(userId);
-        context.append("Favorite products:\n");
-        if (favoriteList.isEmpty() || favoriteList.get().getProducts().isEmpty()) {
-            context.append("- Empty\n");
-        } else {
-            favoriteList.get().getProducts().forEach(product -> context
-                    .append("- ")
-                    .append(nullSafe(product.getProductName()))
-                    .append(", price ").append(product.getPrice())
-                    .append("\n"));
-        }
-
-        return context.toString();
+        return toolResult("get_products", Map.of(
+                "count", products.size(),
+                "products", products
+        ));
     }
 
-    private String askGemini(String context, String userMessage) {
+    private Map<String, Object> getCartToolResult(UserEntity currentUser) {
+        if (currentUser == null) {
+            return toolResult("get_cart", Map.of(
+                    "requiresLogin", true,
+                    "message", "User must log in before cart data can be read."
+            ));
+        }
+
+        Optional<Cart> cart = cartRepository.findByUserIdWithItems(currentUser.getId());
+        List<Map<String, Object>> items = cart
+                .map(Cart::getItems)
+                .orElse(List.of())
+                .stream()
+                .map(this::cartItemToMap)
+                .toList();
+        int totalQuantity = items.stream()
+                .mapToInt(item -> ((Number) item.getOrDefault("quantity", 0)).intValue())
+                .sum();
+        double subtotal = items.stream()
+                .mapToDouble(item -> ((Number) item.getOrDefault("lineTotal", 0.0)).doubleValue())
+                .sum();
+
+        return toolResult("get_cart", Map.of(
+                "count", items.size(),
+                "totalQuantity", totalQuantity,
+                "subtotal", subtotal,
+                "items", items
+        ));
+    }
+
+    private Map<String, Object> getFavoritesToolResult(UserEntity currentUser) {
+        if (currentUser == null) {
+            return toolResult("get_favorites", Map.of(
+                    "requiresLogin", true,
+                    "message", "User must log in before favorite products can be read."
+            ));
+        }
+
+        List<Map<String, Object>> favorites = favoriteListRepository.findByUserIdWithProducts(currentUser.getId())
+                .map(FavoriteList::getProducts)
+                .orElse(java.util.Collections.emptySet())
+                .stream()
+                .map(this::productToMap)
+                .toList();
+
+        return toolResult("get_favorites", Map.of(
+                "count", favorites.size(),
+                "products", favorites
+        ));
+    }
+
+    private Map<String, Object> getUserToolResult(UserEntity currentUser) {
+        return toolResult("get_current_user", Map.of(
+                "id", currentUser.getId(),
+                "username", nullSafe(currentUser.getUsername())
+        ));
+    }
+
+    private Map<String, Object> productToMap(ProductSpec product) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("productId", product.getProductId());
+        data.put("productName", nullSafe(product.getProductName()));
+        data.put("price", product.getPrice());
+        data.put("imageUrl", nullSafe(product.getImageUrl()));
+        data.put("heightMm", product.getHeightMm());
+        data.put("widthMm", product.getWidthMm());
+        data.put("depthMm", product.getDepthMm());
+        data.put("wirelessNetwork", nullSafe(product.getWirelessNetwork()));
+        data.put("protocols", nullSafe(product.getProtocols()));
+        data.put("chipsetArch", nullSafe(product.getChipsetArch()));
+        data.put("coresMatrix", nullSafe(product.getCoresMatrix()));
+        return data;
+    }
+
+    private Map<String, Object> cartItemToMap(CartItem item) {
+        ProductSpec product = item.getProduct();
+        int quantity = item.getQuantity() == null ? 0 : item.getQuantity();
+        double price = product.getPrice() == null ? 0.0 : product.getPrice();
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("cartItemId", item.getId());
+        data.put("product", productToMap(product));
+        data.put("quantity", quantity);
+        data.put("selectedColor", nullSafe(item.getSelectedColor()));
+        data.put("selectedSize", nullSafe(item.getSelectedSize()));
+        data.put("lineTotal", price * quantity);
+        return data;
+    }
+
+    private Map<String, Object> toolResult(String name, Map<String, Object> data) {
+        return Map.of(
+                "tool", name,
+                "data", data
+        );
+    }
+
+    private boolean containsAny(String value, String... needles) {
+        for (String needle : needles) {
+            if (value.contains(normalize(needle))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String normalize(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.toLowerCase(Locale.ROOT).trim();
+    }
+
+    private String askGemini(List<Map<String, Object>> toolResults, String userMessage) {
         try {
             String prompt = """
                     You are the AI assistant for this landing page shop.
-                    Use the DATABASE CONTEXT below as the source of truth.
-                    If the user asks about products, cart, favorites, specs, price, or recommendations, answer from the context.
-                    If the context does not contain enough information, say what is missing and suggest the closest helpful next step.
+                    The backend has already selected and executed database tools that match the user question.
+                    Use only TOOL RESULTS as the source of truth for products, cart, favorites, and current user data.
+                    If a tool result says requiresLogin=true, tell the user they need to log in before that data can be read.
+                    Do not invent cart items, favorite products, prices, or specs that are not in TOOL RESULTS.
+                    If TOOL RESULTS do not contain enough information, say what is missing and suggest the closest helpful next step.
                     Keep the answer concise, friendly, and in the same language as the user.
 
+                    TOOL RESULTS JSON:
                     %s
 
                     USER QUESTION:
                     %s
-                    """.formatted(context, userMessage);
+                    """.formatted(objectMapper.writeValueAsString(toolResults), userMessage);
 
             Map<String, Object> requestBody = Map.of(
                     "contents", List.of(Map.of(
