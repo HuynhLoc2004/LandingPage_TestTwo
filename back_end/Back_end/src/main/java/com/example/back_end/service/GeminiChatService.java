@@ -11,6 +11,8 @@ import com.example.back_end.repository.FavoriteListRepository;
 import com.example.back_end.repository.ProductSpecRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ import java.util.Optional;
 @Service
 public class GeminiChatService {
 
+    private static final Logger logger = LoggerFactory.getLogger(GeminiChatService.class);
     private static final int MAX_PRODUCTS_IN_CONTEXT = 20;
 
     private final ProductSpecRepository productSpecRepository;
@@ -72,7 +75,13 @@ public class GeminiChatService {
         }
 
         List<Map<String, Object>> toolResults = runToolsForMessage(message, currentUser);
-        return askGemini(toolResults, message);
+        try {
+            return askGemini(toolResults, message);
+        } catch (AppException exception) {
+            logger.warn("Gemini chat failed, using local fallback answer. status={}, message={}",
+                    exception.getStatus(), exception.getMessage());
+            return buildLocalFallbackAnswer(toolResults, exception.getMessage());
+        }
     }
 
     private List<Map<String, Object>> runToolsForMessage(String message, UserEntity currentUser) {
@@ -274,6 +283,8 @@ public class GeminiChatService {
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                logger.warn("Gemini API returned non-success status. status={}, body={}",
+                        response.statusCode(), trimForLog(response.body()));
                 throw mapGeminiError(response.statusCode());
             }
 
@@ -292,6 +303,107 @@ public class GeminiChatService {
         } catch (Exception exception) {
             throw new AppException(HttpStatus.BAD_GATEWAY, "Could not connect to Gemini");
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private String buildLocalFallbackAnswer(List<Map<String, Object>> toolResults, String reason) {
+        StringBuilder answer = new StringBuilder();
+        answer.append("AI Gemini đang tạm thời không phản hồi được");
+        if (reason != null && !reason.isBlank()) {
+            answer.append(" (").append(reason).append(")");
+        }
+        answer.append(". Mình đọc dữ liệu backend hiện có và tóm tắt nhanh cho bạn:\n\n");
+
+        boolean hasToolData = false;
+        for (Map<String, Object> toolResult : toolResults) {
+            String toolName = String.valueOf(toolResult.get("tool"));
+            Map<String, Object> data = (Map<String, Object>) toolResult.get("data");
+
+            if ("get_cart".equals(toolName)) {
+                hasToolData = true;
+                if (Boolean.TRUE.equals(data.get("requiresLogin"))) {
+                    answer.append("- Giỏ hàng: bạn cần đăng nhập để mình đọc dữ liệu giỏ hàng.\n");
+                    continue;
+                }
+
+                int totalQuantity = toInt(data.get("totalQuantity"));
+                double subtotal = toDouble(data.get("subtotal"));
+                List<Map<String, Object>> items = (List<Map<String, Object>>) data.getOrDefault("items", List.of());
+                answer.append("- Giỏ hàng: ").append(totalQuantity)
+                        .append(" sản phẩm, tạm tính $").append(String.format(Locale.US, "%.2f", subtotal)).append(".\n");
+                appendProductLines(answer, items, true);
+            }
+
+            if ("get_favorites".equals(toolName)) {
+                hasToolData = true;
+                if (Boolean.TRUE.equals(data.get("requiresLogin"))) {
+                    answer.append("- Mục yêu thích: bạn cần đăng nhập để mình đọc danh sách yêu thích.\n");
+                    continue;
+                }
+
+                List<Map<String, Object>> products = (List<Map<String, Object>>) data.getOrDefault("products", List.of());
+                answer.append("- Mục yêu thích: ").append(products.size()).append(" sản phẩm.\n");
+                appendProductLines(answer, products, false);
+            }
+
+            if ("get_products".equals(toolName)) {
+                hasToolData = true;
+                List<Map<String, Object>> products = (List<Map<String, Object>>) data.getOrDefault("products", List.of());
+                answer.append("- Danh sách sản phẩm hiện có: ").append(products.size()).append(" sản phẩm.\n");
+                appendProductLines(answer, products, false);
+            }
+        }
+
+        if (!hasToolData) {
+            answer.append("- Chưa có dữ liệu phù hợp để tóm tắt. Bạn thử hỏi về sản phẩm, giỏ hàng hoặc mục yêu thích nha.\n");
+        }
+
+        return answer.toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    private void appendProductLines(StringBuilder answer, List<Map<String, Object>> rows, boolean cartItems) {
+        int limit = Math.min(rows.size(), 5);
+        for (int i = 0; i < limit; i++) {
+            Map<String, Object> row = rows.get(i);
+            Map<String, Object> product = cartItems
+                    ? (Map<String, Object>) row.getOrDefault("product", Map.of())
+                    : row;
+            String productName = String.valueOf(product.getOrDefault("productName", "Sản phẩm"));
+            double price = toDouble(product.get("price"));
+            answer.append("  + ").append(productName).append(" - $")
+                    .append(String.format(Locale.US, "%.2f", price));
+
+            if (cartItems) {
+                answer.append(", SL ").append(toInt(row.get("quantity")));
+                Object selectedColor = row.get("selectedColor");
+                Object selectedSize = row.get("selectedSize");
+                if (selectedColor != null && !"N/A".equals(selectedColor)) {
+                    answer.append(", màu ").append(selectedColor);
+                }
+                if (selectedSize != null && !"N/A".equals(selectedSize)) {
+                    answer.append(", size ").append(selectedSize);
+                }
+            }
+            answer.append("\n");
+        }
+        if (rows.size() > limit) {
+            answer.append("  + ... và ").append(rows.size() - limit).append(" mục khác.\n");
+        }
+    }
+
+    private int toInt(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        return 0;
+    }
+
+    private double toDouble(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        return 0.0;
     }
 
     private String nullSafe(Object value) {
@@ -319,5 +431,12 @@ public class GeminiChatService {
 
     private String trimTrailingSlash(String value) {
         return value.replaceAll("/+$", "");
+    }
+
+    private String trimForLog(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() <= 500 ? value : value.substring(0, 500) + "...";
     }
 }
