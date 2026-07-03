@@ -41,6 +41,19 @@ public class EmailService {
     @Value("${spring.mail.password}")
     private String mailPassword;
 
+    public static class EmailDeliveryException extends RuntimeException {
+        private final String errorCode;
+
+        public EmailDeliveryException(String errorCode, String message, Throwable cause) {
+            super(message, cause);
+            this.errorCode = errorCode;
+        }
+
+        public String getErrorCode() {
+            return errorCode;
+        }
+    }
+
     public void sendSimpleMessage(String to, String subject, String text) {
         try {
             emailSender.send(createMessage(to, subject, text));
@@ -65,8 +78,44 @@ public class EmailService {
             fallbackSender.send(createMessage(to, subject, text));
         } catch (MailException fallbackException) {
             logger.error("Failed to send email to {} after primary and fallback transports", to, fallbackException);
-            throw new IllegalStateException("Email service is temporarily unavailable. Please try again later.", primaryException);
+            throw new EmailDeliveryException(
+                    classifyMailFailure(primaryException, fallbackException),
+                    "Email service is temporarily unavailable. Please try again later.",
+                    fallbackException
+            );
         }
+    }
+
+    private String classifyMailFailure(Throwable primaryException, Throwable fallbackException) {
+        String failureText = (rootCauseMessage(primaryException) + " " + rootCauseMessage(fallbackException)).toLowerCase();
+
+        if (failureText.contains("auth") || failureText.contains("username") || failureText.contains("password")
+                || failureText.contains("credentials")) {
+            return "SMTP_AUTH_FAILED";
+        }
+
+        if (failureText.contains("timed out") || failureText.contains("timeout")) {
+            return "SMTP_CONNECT_TIMEOUT";
+        }
+
+        if (failureText.contains("couldn't connect") || failureText.contains("connection refused")
+                || failureText.contains("unknownhost")) {
+            return "SMTP_CONNECT_FAILED";
+        }
+
+        if (failureText.contains("ssl") || failureText.contains("handshake") || failureText.contains("certificate")) {
+            return "SMTP_TLS_FAILED";
+        }
+
+        return "SMTP_SEND_FAILED";
+    }
+
+    private String rootCauseMessage(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current == null || current.getMessage() == null ? "" : current.getMessage();
     }
 
     private JavaMailSenderImpl createFallbackSender() {
