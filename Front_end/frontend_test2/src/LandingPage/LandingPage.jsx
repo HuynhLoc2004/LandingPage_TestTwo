@@ -86,7 +86,7 @@ const FavoriteProducts = lazy(() => import("../components/FavoriteProducts"));
 const INITIAL_CHAT_MESSAGES = [
   {
     role: "assistant",
-    text: "Xin chào! Tôi có thể hỗ trợ gì về thông số sản phẩm, giỏ hàng hoặc mục yêu thích của bạn không?",
+    text: "Hi! I can help with product specs, your cart, or your favorites. What would you like to know?",
   },
 ];
 
@@ -142,7 +142,7 @@ export default function LandingPage({
   favorites,
   setFavorites,
 }) {
-  // States quản lý tính năng nâng cao
+  // Advanced feature states
   const [darkMode, setDarkMode] = useState(true);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isFavoritesOpen, setIsFavoritesOpen] = useState(false);
@@ -215,7 +215,7 @@ export default function LandingPage({
         const response = await api.post("/api/chat", { message });
         const answer =
           response.data?.answer ||
-          "Mình chưa nhận được phản hồi phù hợp, bạn thử hỏi lại giúp mình nha.";
+          "I could not find a useful answer yet. Please try asking another way.";
 
         setChatMessages((current) => [...current, { role: "assistant", text: answer }]);
       } catch (error) {
@@ -226,7 +226,7 @@ export default function LandingPage({
             role: "assistant",
             text:
               error.response?.data?.message ||
-              "Hiện tại AI chat chưa phản hồi được. Bạn kiểm tra Gemini API key hoặc thử lại sau nha.",
+              "The AI chat is not responding right now. Please check the Gemini API key or try again later.",
           },
         ]);
       } finally {
@@ -359,7 +359,7 @@ export default function LandingPage({
     };
   }, [showNotification]);
 
-  // Tracking Scroll để làm hiệu ứng Điện thoại 3D lướt lên & nghiêng góc
+  // Track scroll progress for the 3D phone lift and tilt effect.
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -413,8 +413,8 @@ export default function LandingPage({
     };
   }, []);
 
-  // Khớp tọa độ biến đổi 3D dựa trên khoảng cuộn chuột.
-  // Dùng spring để khi scroll xuống/lên điện thoại nghiêng chậm, mượt và không bị giật.
+  // Map 3D transform coordinates from the scroll range.
+  // Springs keep the phone tilt smooth while scrolling up and down.
   const smoothPhone = { stiffness: 70, damping: 24, mass: 0.8 };
   const phoneX = useSpring(
     useTransform(scrollYProgress, [0, 1], [0, 70]),
@@ -816,12 +816,12 @@ export default function LandingPage({
               {isLoggedIn ? (
                 <>
                   <LogOut className="w-4 h-4" />
-                  <span className="hidden min-[390px]:inline">Đăng xuất</span>
+                  <span className="hidden min-[390px]:inline">Logout</span>
                 </>
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
-                  <span className="hidden min-[390px]:inline">Đăng nhập</span>
+                  <span className="hidden min-[390px]:inline">Login</span>
                 </>
               )}
             </button>
@@ -933,7 +933,7 @@ export default function LandingPage({
               }}
               className="relative w-[190px] sm:w-[220px] md:w-[240px] h-[380px] sm:h-[430px] md:h-[480px] rounded-[36px] sm:rounded-[48px] shadow-[0_0_0_1px_rgba(255,255,255,0.35),0_24px_70px_rgba(16,185,129,0.22),0_10px_30px_rgba(0,0,0,0.18)] transition-shadow duration-300 border border-white/20 bg-white/80 backdrop-blur-sm"
             >
-              {/* CHỖ THAY ẢNH ĐIỆN THOẠI CHÍNH (HERO 3D SCROLL IMAGE) */}
+              {/* Main phone image slot for the hero 3D scroll visual */}
               <img
                 src={heroImage}
                 alt="Premium smart commerce device preview"
@@ -989,7 +989,7 @@ export default function LandingPage({
         `}</style>
       </section>
 
-      {/* SECTION: TÍNH NĂNG NỔI BẬT (FEATURES SCROLLYTELLING) */}
+      {/* SECTION: FEATURE HIGHLIGHTS */}
       <section
         id="features"
         className="w-full max-w-[1200px] mx-auto px-4 py-16 sm:py-24"
@@ -1102,7 +1102,7 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* SECTION: THÔNG SỐ KỸ THUẬT (SPECIFICATIONS TAB VIEW) */}
+      {/* SECTION: TECHNICAL SPECIFICATIONS */}
       <section
         id="specs"
         className={twMerge(
@@ -1258,7 +1258,7 @@ export default function LandingPage({
 
           {/* Right Showcase Box */}
           <div className="relative w-full h-[350px] rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(6,11,14,0.92),rgba(7,18,14,0.84))] flex items-center justify-center">
-            {/* CHỖ THAY ẢNH CHI TIẾT SẢN PHẨM HOẶC GÓC NGHIÊNG KHÁC (SPEC SHOWCASE IMAGE) */}
+            {/* Product detail image slot or alternate angle for the spec showcase */}
             {currentProduct && (
               <img
                 src={
@@ -1286,7 +1286,7 @@ export default function LandingPage({
         </div>
       </section>
 
-      {/* SECTION: CẤU HÌNH ĐẶT HÀNG INTERACTIVE PRODUCT CONFIGURATOR */}
+      {/* SECTION: INTERACTIVE PRODUCT CONFIGURATOR */}
       <section
         id="configurator"
         className="w-full max-w-[1200px] mx-auto px-4 py-16 sm:py-24"
@@ -1566,7 +1566,7 @@ export default function LandingPage({
                     <LogIn className="h-6 w-6" />
                   </div>
                   <h3 className="font-display text-2xl font-semibold tracking-tight">
-                    {authMode === "login" ? "Đăng nhập" : "Đăng kí"}
+                    {authMode === "login" ? "Login" : "Register"}
                   </h3>
                   <p
                     className={twMerge(
@@ -1575,8 +1575,8 @@ export default function LandingPage({
                     )}
                   >
                     {authMode === "login"
-                      ? "Nhập tài khoản và mật khẩu để tiếp tục."
-                      : "Tạo tài khoản mới chỉ với tài khoản và mật khẩu."}
+                      ? "Enter your username and password to continue."
+                      : "Create a new account with a username and password."}
                   </p>
                 </div>
 
@@ -1588,7 +1588,7 @@ export default function LandingPage({
                     setAuthMode("login");
                   }}
                   className="cursor-pointer rounded-full p-2 opacity-70 transition hover:bg-slate-500/10 hover:opacity-100"
-                  aria-label="Đóng form"
+                  aria-label="Close form"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1600,7 +1600,7 @@ export default function LandingPage({
               >
                 <label className="block">
                   <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.22em] opacity-60">
-                    Tài khoản
+                    Username
                   </span>
                   <div
                     className={twMerge(
@@ -1617,16 +1617,16 @@ export default function LandingPage({
                       required
                       value={loginForm.username}
                       onChange={handleInputChange}
-                      placeholder="Nhập tài khoản (không khoảng trắng)"
+                      placeholder="Enter username without spaces"
                       className="w-full bg-transparent text-sm outline-none placeholder:text-slate-500"
-                      aria-label="Tài khoản"
+                      aria-label="Username"
                     />
                   </div>
                 </label>
 
                 <label className="block">
                   <span className="mb-2 block text-[11px] font-bold uppercase tracking-[0.22em] opacity-60">
-                    Mật khẩu
+                    Password
                   </span>
                   <div
                     className={twMerge(
@@ -1643,16 +1643,16 @@ export default function LandingPage({
                       required
                       value={loginForm.password}
                       onChange={handleInputChange}
-                      placeholder="Tối thiểu 6 ký tự, hoa, thường, số, đặc biệt"
+                      placeholder="At least 6 chars with upper, lower, number, and symbol"
                       className="w-full bg-transparent text-sm outline-none placeholder:text-slate-500"
-                      aria-label="Mật khẩu"
+                      aria-label="Password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
                       className="cursor-pointer rounded-full p-1 opacity-70 transition hover:opacity-100"
                       aria-label={
-                        showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"
+                        showPassword ? "Hide password" : "Show password"
                       }
                     >
                       {showPassword ? (
@@ -1669,7 +1669,7 @@ export default function LandingPage({
                   className="mt-2 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400 active:scale-[0.99]"
                 >
                   <LogIn className="h-4 w-4" />
-                  {authMode === "login" ? "Đăng nhập" : "Đăng kí"}
+                  {authMode === "login" ? "Login" : "Register"}
                 </button>
 
                 {authMode === "login" && (
@@ -1681,7 +1681,7 @@ export default function LandingPage({
                       darkMode ? "text-emerald-300" : "text-emerald-700",
                     )}
                   >
-                    Chưa có tài khoản? Bấm vào đây để đăng kí
+                    Need an account? Create one here
                   </button>
                 )}
 
@@ -1694,7 +1694,7 @@ export default function LandingPage({
                       darkMode ? "text-emerald-300" : "text-emerald-700",
                     )}
                   >
-                    Đã có tài khoản? Quay lại đăng nhập
+                    Already have an account? Back to login
                   </button>
                 )}
               </form>
@@ -1703,7 +1703,7 @@ export default function LandingPage({
         )}
       </AnimatePresence>
 
-      {/* --- E-COMMERCE MINI SIDEBAR CART PANEL (Tính năng điểm cộng) --- */}
+      {/* --- E-COMMERCE MINI SIDEBAR CART PANEL --- */}
       <AnimatePresence>
         {isCartOpen && (
           <>
@@ -1813,12 +1813,12 @@ export default function LandingPage({
                 <button
                   onClick={() =>
                     alert(
-                      "Xác nhận đặt hàng payload thành công về hệ thống Spring Boot Mock!",
+                      "Order payload was successfully sent to the Spring Boot mock system.",
                     )
                   }
                   className="cursor-pointer w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-medium text-center text-xs"
                 >
-                  Xác nhận đặt hàng (POST Payload)
+                  Confirm Order (POST Payload)
                 </button>
               </div>
             </motion.div>
@@ -1826,7 +1826,7 @@ export default function LandingPage({
         )}
       </AnimatePresence>
 
-      {/* --- FLOATING AI CHATBOT SYSTEM PANEL (Tính năng điểm cộng) --- */}
+      {/* --- FLOATING AI CHATBOT SYSTEM PANEL --- */}
       <AnimatePresence>
         {isChatOpen && (
           <motion.div
@@ -1921,7 +1921,7 @@ export default function LandingPage({
                         : "bg-white border-slate-100 text-slate-700",
                     )}
                   >
-                    Đang đọc dữ liệu và suy nghĩ...
+                    Reading data and thinking...
                   </div>
                 </div>
               )}
@@ -1984,10 +1984,10 @@ export default function LandingPage({
                       <MessageSquare className="h-5 w-5" />
                     </div>
                     <h4 className="text-sm font-semibold">
-                      Kết thúc phiên giao tiếp?
+                      End this chat session?
                     </h4>
                     <p className="mt-2 text-xs leading-relaxed text-slate-400">
-                      Nếu kết thúc, toàn bộ nội dung trò chuyện hiện tại sẽ được xoá.
+                      Ending the session will clear the current conversation.
                     </p>
                     <div className="mt-5 grid grid-cols-2 gap-2">
                       <button
@@ -2000,14 +2000,14 @@ export default function LandingPage({
                             : "border-slate-200 text-slate-700 hover:bg-slate-100",
                         )}
                       >
-                        Tiếp tục
+                        Continue
                       </button>
                       <button
                         type="button"
                         onClick={handleConfirmEndChat}
                         className="rounded-2xl bg-blue-600 px-3 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
                       >
-                        Kết thúc
+                        End
                       </button>
                     </div>
                   </motion.div>

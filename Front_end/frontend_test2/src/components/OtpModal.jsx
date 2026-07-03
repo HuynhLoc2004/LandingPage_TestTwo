@@ -79,7 +79,7 @@ export default function OtpModal({ isOpen, onClose, onVerify, email, isVerifying
                 type="button"
                 onClick={onClose}
                 className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                aria-label="Đóng hộp xác thực OTP"
+                aria-label="Close OTP verification dialog"
               >
                 <X size={20} />
               </button>
@@ -88,9 +88,9 @@ export default function OtpModal({ isOpen, onClose, onVerify, email, isVerifying
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-500 shadow-[0_10px_20px_rgba(59,130,246,0.3),_inset_0_2px_0_rgba(255,255,255,0.3)]">
                   <CheckCircle className="text-white" size={32} />
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Xác thực Email</h2>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Verify Email</h2>
                 <p className="text-slate-500 dark:text-slate-400 text-sm">
-                  Chúng tôi đã gửi mã OTP gồm 6 chữ số đến<br />
+                  We sent a 6-digit OTP code to<br />
                   <span className="font-semibold text-slate-700 dark:text-slate-300">{email}</span>
                 </p>
               </div>
@@ -127,18 +127,18 @@ export default function OtpModal({ isOpen, onClose, onVerify, email, isVerifying
                   {isVerifying ? (
                     <>
                       <Loader2 size={20} className="animate-spin" />
-                      Đang xác thực...
+                      Verifying...
                     </>
                   ) : (
-                    'Xác nhận OTP'
+                    'Verify OTP'
                   )}
                 </button>
               </form>
               
               <p className="text-center mt-6 text-sm text-slate-500 dark:text-slate-400">
-                Chưa nhận được mã?{' '}
+                Did not receive the code?{' '}
                 <button type="button" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-                  Gửi lại
+                  Resend
                 </button>
               </p>
             </div>

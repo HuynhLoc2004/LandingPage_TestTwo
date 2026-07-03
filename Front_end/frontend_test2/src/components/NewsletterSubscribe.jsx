@@ -13,7 +13,7 @@ export default function NewsletterSubscribe({ showNotification }) {
   const [isOtpModalOpen, setIsOtpModalOpen] = useState(false);
   const [otpError, setOtpError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [authError, setAuthError] = useState(false); // Thêm state quản lý lỗi chưa đăng nhập
+  const [authError, setAuthError] = useState(false);
   
 
   // Subscription states
@@ -25,7 +25,7 @@ export default function NewsletterSubscribe({ showNotification }) {
   // Custom WebSocket Hook
   const { messages } = useWebSocket();
 
-  // Hàm gọi API check trạng thái đăng ký của user hiện tại
+  // Fetch the current user's subscription status without blocking the form.
   const fetchSubscriptionStatus = async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
@@ -52,7 +52,7 @@ export default function NewsletterSubscribe({ showNotification }) {
     }
   };
 
-  // Chạy lần đầu khi load trang
+  // Load the status once when the component mounts.
   useEffect(() => {
     const loadStatus = async () => {
       await fetchSubscriptionStatus();
@@ -60,7 +60,7 @@ export default function NewsletterSubscribe({ showNotification }) {
     loadStatus();
   }, []);
 
-  // Lắng nghe sự thay đổi của token (khi User Login hoặc Logout) để cập nhật UI lập tức
+  // Refresh when auth state changes.
   useEffect(() => {
     let lastToken = localStorage.getItem('accessToken');
     
@@ -72,7 +72,7 @@ export default function NewsletterSubscribe({ showNotification }) {
       }
     };
 
-    // Lắng nghe qua custom event và storage (nếu thao tác ở tab khác)
+    // Listen through custom events and storage changes from other tabs.
     window.addEventListener('storage', checkTokenChange);
     window.addEventListener('auth:changed', checkTokenChange);
     window.addEventListener('auth:login', checkTokenChange);
@@ -108,8 +108,7 @@ export default function NewsletterSubscribe({ showNotification }) {
     // Check Login Status from localStorage/accessToken
     const isLoggedIn = !!localStorage.getItem('accessToken');
     if (!isLoggedIn) {
-      setAuthError(true); // Hiển thị thanh thông báo lỗi đẹp mắt
-      // Tự động tắt thông báo sau 3.5s
+      setAuthError(true);
       setTimeout(() => setAuthError(false), 3500);
       return;
     }
@@ -123,7 +122,7 @@ export default function NewsletterSubscribe({ showNotification }) {
       setIsOtpModalOpen(true);
     } catch (error) {
       console.error('Failed to request OTP:', error);
-      showNotification(error.response?.data?.message || 'Có lỗi xảy ra khi gửi OTP. Vui lòng thử lại.', 'error');
+      showNotification(error.response?.data?.message || 'Something went wrong while sending the OTP. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -144,7 +143,7 @@ export default function NewsletterSubscribe({ showNotification }) {
       setIsOtpModalOpen(false);
       
     } catch (error) {
-      setOtpError(error.response?.data?.message || 'Xác thực thất bại');
+      setOtpError(error.response?.data?.message || 'Verification failed');
     } finally {
       setIsVerifying(false);
     }
@@ -159,10 +158,10 @@ export default function NewsletterSubscribe({ showNotification }) {
       setSubscribedEmail('');
       setEmail('');
       localStorage.removeItem(SUBSCRIPTION_CACHE_KEY);
-      showNotification('Hủy đăng ký nhận thông báo thành công!', 'success');
+      showNotification('Notification subscription canceled successfully.', 'success');
     } catch (error) {
       console.error('Failed to unsubscribe:', error);
-      showNotification(error.response?.data?.message || 'Có lỗi xảy ra khi hủy đăng ký. Vui lòng thử lại.', 'error');
+      showNotification(error.response?.data?.message || 'Something went wrong while canceling the subscription. Please try again.', 'error');
     } finally {
       setIsUnsubscribing(false);
     }
@@ -182,10 +181,10 @@ export default function NewsletterSubscribe({ showNotification }) {
             <BellRing size={28} />
           </div>
           <h3 className="text-3xl font-bold text-slate-900 dark:text-white">
-            Nhận Thông Báo Sự Kiện
+            Get Event Updates
           </h3>
           <p className="text-slate-600 dark:text-slate-400 max-w-md">
-            Đăng ký email của bạn để không bỏ lỡ bất kỳ cập nhật và sự kiện quan trọng nào từ chúng tôi.
+            Subscribe with your email so you never miss important updates and events from us.
           </p>
         </div>
 
@@ -198,7 +197,7 @@ export default function NewsletterSubscribe({ showNotification }) {
                 exit={{ opacity: 0, y: -10, height: 0 }}
                 className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 p-3 rounded-xl text-sm font-medium text-center shadow-sm overflow-hidden"
               >
-                Vui lòng đăng nhập để có thể đăng ký nhận thông báo sự kiện!
+                Please sign in before subscribing to event updates.
               </motion.div>
             )}
           </AnimatePresence>
@@ -215,14 +214,14 @@ export default function NewsletterSubscribe({ showNotification }) {
                 <div className="flex items-center gap-3 overflow-hidden">
                   <CheckCircle2 className="text-green-600 dark:text-green-400 flex-shrink-0" size={24} />
                   <div className="flex flex-col truncate">
-                    <span className="text-sm text-green-800/70 dark:text-green-400/70 font-medium">Đang nhận thông báo qua:</span>
+                    <span className="text-sm text-green-800/70 dark:text-green-400/70 font-medium">Receiving updates at:</span>
                     <span className="font-semibold text-green-900 dark:text-green-300 truncate">{subscribedEmail}</span>
                   </div>
                 </div>
                 <button
                   onClick={handleUnsubscribe}
                   disabled={isUnsubscribing}
-                  title="Hủy đăng ký"
+                  title="Cancel subscription"
                   className="flex-shrink-0 p-3 text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl transition-all disabled:opacity-50"
                 >
                   <Trash2 size={20} />
@@ -241,7 +240,7 @@ export default function NewsletterSubscribe({ showNotification }) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Nhập địa chỉ email của bạn..."
+                  placeholder="Enter your email address..."
                   required
                   className="w-full min-w-0 px-5 py-4 sm:pl-6 sm:pr-32 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
                 />
@@ -251,10 +250,10 @@ export default function NewsletterSubscribe({ showNotification }) {
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3.5 font-medium text-white shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] transition-all hover:from-blue-500 hover:to-indigo-500 hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] disabled:opacity-70 sm:absolute sm:right-2 sm:top-2 sm:bottom-2 sm:w-auto sm:py-0 group"
                 >
                   {isSubmitting ? (
-                    <span className="animate-pulse">Đang gửi...</span>
+                    <span className="animate-pulse">Sending...</span>
                   ) : (
                     <>
-                      <span>Gửi</span>
+                      <span>Send</span>
                       <Send size={16} className="group-hover:translate-x-1 transition-transform" />
                     </>
                   )}
@@ -290,21 +289,21 @@ export default function NewsletterSubscribe({ showNotification }) {
               exit={{ scale: 0.9, y: 20 }}
               className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-xl max-w-sm w-full text-center"
             >
-              <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Xác nhận hủy đăng ký</h4>
-              <p className="text-slate-600 dark:text-slate-400 mb-6">Bạn có chắc chắn muốn hủy nhận thông báo sự kiện không?</p>
+              <h4 className="text-xl font-bold text-slate-900 dark:text-white mb-4">Confirm Cancellation</h4>
+              <p className="text-slate-600 dark:text-slate-400 mb-6">Are you sure you want to stop receiving event updates?</p>
               <div className="flex justify-center gap-4">
                 <button
                   onClick={() => setIsUnsubscribeModalOpen(false)}
                   className="px-6 py-3 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                 >
-                  Hủy
+                  Cancel
                 </button>
                 <button
                   onClick={handleUnsubscribeConfirm}
                   className="px-6 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 transition-colors"
                   disabled={isUnsubscribing}
                 >
-                  {isUnsubscribing ? 'Đang hủy...' : 'Xác nhận hủy'}
+                  {isUnsubscribing ? 'Canceling...' : 'Confirm'}
                 </button>
               </div>
             </motion.div>
