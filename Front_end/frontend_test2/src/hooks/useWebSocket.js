@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
@@ -24,7 +24,7 @@ const buildSockJsUrl = () => {
 };
 
 export function useWebSocket() {
-  const [stompClient, setStompClient] = useState(null);
+  const stompClientRef = useRef(null);
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -47,12 +47,13 @@ export function useWebSocket() {
     });
 
     client.activate();
-    setStompClient(client);
+    stompClientRef.current = client;
 
     return () => {
+      stompClientRef.current = null;
       client.deactivate();
     };
   }, []);
 
-  return { isConnected, messages, stompClient };
+  return { isConnected, messages };
 }
