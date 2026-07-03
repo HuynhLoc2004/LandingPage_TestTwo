@@ -32,8 +32,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final List<String> EXCLUDED_PATHS = Arrays.asList(
             "/auth/**",
             "/products/**",
-            "/ws/**",
-            "/api/subscribe/**" // Add newsletter subscription endpoints
+            "/ws/**"
     );
 
     @Override
