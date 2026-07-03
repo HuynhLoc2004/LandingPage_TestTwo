@@ -83,6 +83,13 @@ const LinkedinIcon = ({ className = "" }) => (
 
 const NewsletterSubscribe = lazy(() => import("../components/NewsletterSubscribe"));
 
+const INITIAL_CHAT_MESSAGES = [
+  {
+    role: "assistant",
+    text: "Xin chào! Tôi có thể hỗ trợ gì về thông số sản phẩm, giỏ hàng hoặc mục yêu thích của bạn không?",
+  },
+];
+
 const LOGOS = [
   {
     name: "Procure",
@@ -158,13 +165,9 @@ export default function LandingPage({
   const [subscribed, setSubscribed] = useState(false);
   const [activeSpecTab, setActiveSpecTab] = useState("dimensions");
   const [chatInput, setChatInput] = useState("");
-  const [chatMessages, setChatMessages] = useState([
-    {
-      role: "assistant",
-      text: "Xin chào! Tôi có thể hỗ trợ gì về thông số sản phẩm, giỏ hàng hoặc mục yêu thích của bạn không?",
-    },
-  ]);
+  const [chatMessages, setChatMessages] = useState(() => [...INITIAL_CHAT_MESSAGES]);
   const [isChatSending, setIsChatSending] = useState(false);
+  const [isChatEndConfirmOpen, setIsChatEndConfirmOpen] = useState(false);
   const pendingFavoriteIdsRef = useRef(new Set());
   const pendingCartItemIdsRef = useRef(new Set());
 
@@ -231,6 +234,22 @@ export default function LandingPage({
     },
     [chatInput, isChatSending],
   );
+
+  const handleRequestCloseChat = useCallback(() => {
+    setIsChatEndConfirmOpen(true);
+  }, []);
+
+  const handleCancelEndChat = useCallback(() => {
+    setIsChatEndConfirmOpen(false);
+  }, []);
+
+  const handleConfirmEndChat = useCallback(() => {
+    setChatInput("");
+    setChatMessages([...INITIAL_CHAT_MESSAGES]);
+    setIsChatSending(false);
+    setIsChatEndConfirmOpen(false);
+    setIsChatOpen(false);
+  }, []);
 
   const handleRegister = useCallback(
     async (e) => {
@@ -1811,7 +1830,7 @@ export default function LandingPage({
                 </div>
               </div>
               <button
-                onClick={() => setIsChatOpen(false)}
+                onClick={handleRequestCloseChat}
                 className="p-2 rounded-full cursor-pointer text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
                 aria-label="Close chat"
               >
@@ -1916,6 +1935,60 @@ export default function LandingPage({
                 <ChevronRight className="w-4 h-4" />
               </button>
             </form>
+
+            <AnimatePresence>
+              {isChatEndConfirmOpen && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 z-10 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+                >
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: 10 }}
+                    className={twMerge(
+                      "w-full max-w-xs rounded-3xl border p-5 text-center shadow-2xl",
+                      darkMode
+                        ? "border-white/10 bg-slate-900 text-slate-100"
+                        : "border-slate-200 bg-white text-slate-900",
+                    )}
+                  >
+                    <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600/15 text-blue-300">
+                      <MessageSquare className="h-5 w-5" />
+                    </div>
+                    <h4 className="text-sm font-semibold">
+                      Kết thúc phiên giao tiếp?
+                    </h4>
+                    <p className="mt-2 text-xs leading-relaxed text-slate-400">
+                      Nếu kết thúc, toàn bộ nội dung trò chuyện hiện tại sẽ được xoá.
+                    </p>
+                    <div className="mt-5 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCancelEndChat}
+                        className={twMerge(
+                          "rounded-2xl border px-3 py-2.5 text-xs font-medium transition-colors",
+                          darkMode
+                            ? "border-white/10 text-slate-200 hover:bg-white/10"
+                            : "border-slate-200 text-slate-700 hover:bg-slate-100",
+                        )}
+                      >
+                        Tiếp tục
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleConfirmEndChat}
+                        className="rounded-2xl bg-blue-600 px-3 py-2.5 text-xs font-semibold text-white transition-colors hover:bg-blue-700"
+                      >
+                        Kết thúc
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
