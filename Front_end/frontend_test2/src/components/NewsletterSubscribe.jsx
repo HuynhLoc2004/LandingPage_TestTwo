@@ -22,7 +22,7 @@ export default function NewsletterSubscribe({ showNotification }) {
   const [isUnsubscribeModalOpen, setIsUnsubscribeModalOpen] = useState(false); // New state for unsubscribe confirmation modal
   
   // Custom WebSocket Hook
-  const { isConnected, messages } = useWebSocket();
+  const { messages } = useWebSocket();
 
   // Hàm gọi API check trạng thái đăng ký của user hiện tại
   const fetchSubscriptionStatus = async (showLoading = true) => {
@@ -265,14 +265,6 @@ export default function NewsletterSubscribe({ showNotification }) {
           </div>
         )}
         
-        {/* Connection Status Indicator */}
-        <div className="absolute top-4 right-4 flex items-center gap-2 text-xs font-medium">
-          <span className="text-slate-500 dark:text-slate-400">Trạng thái:</span>
-          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-colors ${isConnected ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800' : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800'}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></span>
-            {isConnected ? 'Live' : 'Mất kết nối'}
-          </div>
-        </div>
       </div>
 
       <OtpModal
