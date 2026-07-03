@@ -41,7 +41,7 @@ public class GeminiChatService {
     @Value("${GEMINI_API_KEY:}")
     private String geminiApiKey;
 
-    @Value("${GEMINI_MODEL:gemini-2.0-flash}")
+    @Value("${GEMINI_MODEL:gemini-1.5-flash}")
     private String geminiModel;
 
     @Value("${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta}")
@@ -180,10 +180,7 @@ public class GeminiChatService {
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new AppException(
-                        HttpStatus.BAD_GATEWAY,
-                        "Gemini request failed with status " + response.statusCode()
-                );
+                throw mapGeminiError(response.statusCode());
             }
 
             JsonNode root = objectMapper.readTree(response.body());
@@ -205,6 +202,25 @@ public class GeminiChatService {
 
     private String nullSafe(Object value) {
         return value == null ? "N/A" : value.toString();
+    }
+
+    private AppException mapGeminiError(int statusCode) {
+        if (statusCode == 400) {
+            return new AppException(HttpStatus.BAD_GATEWAY, "Gemini rejected the request. Please check the model name and request format.");
+        }
+        if (statusCode == 401 || statusCode == 403) {
+            return new AppException(HttpStatus.SERVICE_UNAVAILABLE, "Gemini API key is invalid or does not have permission.");
+        }
+        if (statusCode == 404) {
+            return new AppException(HttpStatus.BAD_GATEWAY, "Gemini model was not found. Please check GEMINI_MODEL.");
+        }
+        if (statusCode == 429) {
+            return new AppException(HttpStatus.TOO_MANY_REQUESTS, "Gemini quota or rate limit reached. Please try again later.");
+        }
+        if (statusCode >= 500) {
+            return new AppException(HttpStatus.BAD_GATEWAY, "Gemini service is temporarily unavailable.");
+        }
+        return new AppException(HttpStatus.BAD_GATEWAY, "Gemini request failed with status " + statusCode);
     }
 
     private String trimTrailingSlash(String value) {
