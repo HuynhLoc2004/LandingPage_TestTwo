@@ -40,11 +40,12 @@ public class SubscriptionController {
     @PostMapping("/request")
     public ResponseEntity<?> requestSubscription(@RequestBody Map<String, String> request) {
         String email = request.get("email");
-        if (email == null || email.isEmpty()) {
+        if (email == null || email.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Email is required"));
         }
+        String normalizedEmail = email.trim().toLowerCase();
         try {
-            emailService.generateAndSendOtp(email);
+            emailService.generateAndSendOtp(normalizedEmail);
             return ResponseEntity.ok(Map.of("message", "OTP sent successfully"));
         } catch (EmailDeliveryException exception) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -62,33 +63,52 @@ public class SubscriptionController {
         String email = request.get("email");
         String otp = request.get("otp");
 
-        if (email == null || otp == null) {
+        if (email == null || email.isBlank() || otp == null || otp.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "Email and OTP are required"));
         }
 
-        if (emailService.verifyOtp(email, otp)) {
+        String normalizedEmail = email.trim().toLowerCase();
+
+        if (emailService.verifyOtp(normalizedEmail, otp.trim())) {
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
             Optional<UserEntity> userOpt = userRepository.findByUsername(username);
 
             if (userOpt.isPresent()) {
                 UserEntity user = userOpt.get();
-                
-                NotificationEmail notificationEmail = new NotificationEmail();
-                notificationEmail.setEmail(email);
-                notificationEmail.setUser(user);
-                
-                user.setNotificationEmail(notificationEmail);
-                userRepository.save(user);
+
+                Optional<NotificationEmail> existingEmailOpt = notificationEmailRepository.findByEmail(normalizedEmail);
+                if (existingEmailOpt.isPresent()) {
+                    NotificationEmail existingEmail = existingEmailOpt.get();
+                    if (!existingEmail.getUser().getId().equals(user.getId())) {
+                        return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(Map.of("message", "This email is already subscribed by another account"));
+                    }
+
+                    user.setNotificationEmail(existingEmail);
+                } else {
+                    NotificationEmail currentEmail = user.getNotificationEmail();
+                    if (currentEmail != null && !currentEmail.getEmail().equalsIgnoreCase(normalizedEmail)) {
+                        user.setNotificationEmail(null);
+                        userRepository.save(user);
+                        notificationEmailRepository.delete(currentEmail);
+                    }
+
+                    NotificationEmail notificationEmail = new NotificationEmail();
+                    notificationEmail.setEmail(normalizedEmail);
+                    notificationEmail.setUser(user);
+                    notificationEmailRepository.save(notificationEmail);
+                    user.setNotificationEmail(notificationEmail);
+                }
 
                 // Cập nhật RAM cache
-                subscriptionCache.put(username, email);
+                subscriptionCache.put(username, normalizedEmail);
 
                 // Send WebSocket message
-                messagingTemplate.convertAndSend("/topic/subscription", Map.of("message", "Subscription successful", "email", email));
+                messagingTemplate.convertAndSend("/topic/subscription", Map.of("message", "Subscription successful", "email", normalizedEmail));
 
                 // Schedule welcome email 5 minutes later
                 taskScheduler.schedule(() -> {
-                    emailService.sendSimpleMessage(email, "Welcome to our Newsletter!", "Thank you for subscribing. We will keep you updated with the latest news.");
+                    emailService.sendSimpleMessage(normalizedEmail, "Welcome to our Newsletter!", "Thank you for subscribing. We will keep you updated with the latest news.");
                 }, Instant.now().plusSeconds(300));
 
                 return ResponseEntity.ok(Map.of("message", "Subscription verified successfully"));

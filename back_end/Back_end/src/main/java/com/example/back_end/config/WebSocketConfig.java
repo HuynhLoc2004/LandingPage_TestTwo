@@ -23,7 +23,19 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns(frontendUrl, "http://localhost:5173", "http://localhost:5174")
+                .setAllowedOriginPatterns(
+                        normalizeOrigin(frontendUrl),
+                        "https://*.vercel.app",
+                        "http://localhost:5173",
+                        "http://localhost:5174"
+                )
                 .withSockJS();
+    }
+
+    private String normalizeOrigin(String origin) {
+        if (origin == null || origin.isBlank()) {
+            return "http://localhost:5173";
+        }
+        return origin.replaceAll("/+$", "");
     }
 }
