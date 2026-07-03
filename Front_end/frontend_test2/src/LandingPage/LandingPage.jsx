@@ -32,7 +32,6 @@ import {
 } from "lucide-react";
 import { twMerge } from "tailwind-merge";
 import api from "../api/axios"; // Import the configured axios instance
-import FavoriteProducts from "../components/FavoriteProducts"; // Import FavoriteProducts component
 import heroImage from "../assets/hero.png";
 // NotificationBar is handled by App.jsx, no need to import here
 
@@ -82,6 +81,7 @@ const LinkedinIcon = ({ className = "" }) => (
 );
 
 const NewsletterSubscribe = lazy(() => import("../components/NewsletterSubscribe"));
+const FavoriteProducts = lazy(() => import("../components/FavoriteProducts"));
 
 const INITIAL_CHAT_MESSAGES = [
   {
@@ -168,6 +168,7 @@ export default function LandingPage({
   const [chatMessages, setChatMessages] = useState(() => [...INITIAL_CHAT_MESSAGES]);
   const [isChatSending, setIsChatSending] = useState(false);
   const [isChatEndConfirmOpen, setIsChatEndConfirmOpen] = useState(false);
+  const [shouldLoadHeroVideo, setShouldLoadHeroVideo] = useState(false);
   const pendingFavoriteIdsRef = useRef(new Set());
   const pendingCartItemIdsRef = useRef(new Set());
 
@@ -285,6 +286,22 @@ export default function LandingPage({
   }, [showNotification, setAuthMode, setIsLoginOpen]);
 
   useEffect(() => {
+    const canLoadVideo =
+      window.matchMedia("(min-width: 768px)").matches &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (!canLoadVideo) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShouldLoadHeroVideo(true);
+    }, 2500);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
     let isMounted = true;
 
     if (!isLoggedIn) {
@@ -336,10 +353,11 @@ export default function LandingPage({
       }
     };
 
-    fetchProducts();
+    const timer = window.setTimeout(fetchProducts, 1000);
 
     return () => {
       isMounted = false;
+      window.clearTimeout(timer);
     };
   }, [showNotification]);
 
@@ -830,17 +848,19 @@ export default function LandingPage({
           <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none opacity-40">
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:72px_72px] opacity-25" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.12),transparent_30%),radial-gradient(circle_at_80%_15%,rgba(34,197,94,0.08),transparent_22%),radial-gradient(circle_at_70%_80%,rgba(16,185,129,0.08),transparent_20%)]" />
-            <video
-              src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260505_101331_74f9b798-3f00-4e86-8a01-377aa16ffeaa.mp4"
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="metadata"
-              poster={heroImage}
-              aria-hidden="true"
-              className="w-full h-full object-cover scale-105"
-            />
+            {shouldLoadHeroVideo && (
+              <video
+                src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260505_101331_74f9b798-3f00-4e86-8a01-377aa16ffeaa.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="none"
+                poster={heroImage}
+                aria-hidden="true"
+                className="w-full h-full object-cover scale-105"
+              />
+            )}
           </div>
 
           {/* Left Text Box */}
@@ -886,9 +906,6 @@ export default function LandingPage({
           {/* Right Box: 3D Perspective Phone Animation Driven by Scroll */}
           <div className="relative w-full md:w-[450px] h-[290px] sm:h-[350px] md:h-full flex items-center justify-center perspective-[1200px] z-10 mt-8 md:mt-0">
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.7, ease: "easeOut" }}
               style={{
                 x: phoneX,
                 y: phoneY,
@@ -903,15 +920,8 @@ export default function LandingPage({
             >
               {/* CHỖ THAY ẢNH ĐIỆN THOẠI CHÍNH (HERO 3D SCROLL IMAGE) */}
               <img
-                src={
-                  currentProduct?.imageUrl ||
-                  heroImage ||
-                  "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=1400&auto=format&fit=crop"
-                }
-                alt={
-                  currentProduct?.productName ||
-                  "Cinematic Ultra Premium Smartphone Hardware Device"
-                }
+                src={heroImage}
+                alt="Premium smart commerce device preview"
                 width="240"
                 height="480"
                 loading="eager"
@@ -2178,12 +2188,14 @@ export default function LandingPage({
             transition={{ duration: 0.4, ease: [0.25, 1, 0.5, 1] }}
             className="fixed top-0 right-0 bottom-0 z-[71] h-full w-full max-w-md"
           >
-            <FavoriteProducts
-              favorites={favorites}
-              toggleFavorite={toggleFavorite}
-              darkMode={darkMode}
-              onClose={() => setIsFavoritesOpen(false)}
-            />
+            <Suspense fallback={null}>
+              <FavoriteProducts
+                favorites={favorites}
+                toggleFavorite={toggleFavorite}
+                darkMode={darkMode}
+                onClose={() => setIsFavoritesOpen(false)}
+              />
+            </Suspense>
           </motion.div>
         )}
       </AnimatePresence>
