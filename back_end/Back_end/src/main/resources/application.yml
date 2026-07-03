@@ -38,9 +38,9 @@ spring:
           ssl:
             enable: ${MAIL_SSL_ENABLE:true}
             trust: ${MAIL_SSL_TRUST:smtp.gmail.com}
-          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT:20000}
-          timeout: ${MAIL_TIMEOUT:20000}
-          writetimeout: ${MAIL_WRITE_TIMEOUT:20000}
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT:5000}
+          timeout: ${MAIL_TIMEOUT:5000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT:5000}
 server:
   port: 8080
   forward-headers-strategy: FRAMEWORK
