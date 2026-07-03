@@ -5,6 +5,8 @@ import OtpModal from './OtpModal';
 import { useWebSocket } from '../hooks/useWebSocket';
 import api from '../api/axios'; // Make sure this is the correct axios instance path
 
+const SUBSCRIPTION_CACHE_KEY = 'newsletterSubscriptionEmail';
+
 export default function NewsletterSubscribe({ showNotification }) {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -15,9 +17,8 @@ export default function NewsletterSubscribe({ showNotification }) {
   
 
   // Subscription states
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subscribedEmail, setSubscribedEmail] = useState('');
-  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const [subscribedEmail, setSubscribedEmail] = useState(() => localStorage.getItem(SUBSCRIPTION_CACHE_KEY) || '');
+  const [isSubscribed, setIsSubscribed] = useState(() => Boolean(localStorage.getItem(SUBSCRIPTION_CACHE_KEY)));
   const [isUnsubscribing, setIsUnsubscribing] = useState(false);
   const [isUnsubscribeModalOpen, setIsUnsubscribeModalOpen] = useState(false); // New state for unsubscribe confirmation modal
   
@@ -25,31 +26,29 @@ export default function NewsletterSubscribe({ showNotification }) {
   const { messages } = useWebSocket();
 
   // Hàm gọi API check trạng thái đăng ký của user hiện tại
-  const fetchSubscriptionStatus = async (showLoading = true) => {
+  const fetchSubscriptionStatus = async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
       setIsSubscribed(false);
       setSubscribedEmail('');
+      localStorage.removeItem(SUBSCRIPTION_CACHE_KEY);
       setAuthError(false);
-      setIsCheckingStatus(false);
       return;
     }
-    
-    if (showLoading) setIsCheckingStatus(true); // Hiển thị trạng thái loading mượt mà để tránh chớp form nhập
-    
+
     try {
       const response = await api.get('/api/subscribe/status');
       if (response.data.subscribed) {
         setIsSubscribed(true);
         setSubscribedEmail(response.data.email);
+        localStorage.setItem(SUBSCRIPTION_CACHE_KEY, response.data.email);
       } else {
         setIsSubscribed(false);
         setSubscribedEmail('');
+        localStorage.removeItem(SUBSCRIPTION_CACHE_KEY);
       }
     } catch (error) {
       console.error('Failed to fetch subscription status', error);
-    } finally {
-      setIsCheckingStatus(false);
     }
   };
 
@@ -68,9 +67,8 @@ export default function NewsletterSubscribe({ showNotification }) {
     const checkTokenChange = () => {
       const currentToken = localStorage.getItem('accessToken');
       if (currentToken !== lastToken) {
-        const wasLoggedOut = !lastToken && currentToken; // Đánh dấu vừa đăng nhập
         lastToken = currentToken;
-        fetchSubscriptionStatus(wasLoggedOut); // Chỉ bật loading nếu vừa chuyển từ logout sang login
+        fetchSubscriptionStatus();
       }
     };
 
@@ -96,6 +94,7 @@ export default function NewsletterSubscribe({ showNotification }) {
         setTimeout(() => {
           setIsSubscribed(true);
           setSubscribedEmail(latestMessage.email);
+          localStorage.setItem(SUBSCRIPTION_CACHE_KEY, latestMessage.email);
           setIsOtpModalOpen(false); // Close modal if open
         }, 0);
       }
@@ -141,6 +140,7 @@ export default function NewsletterSubscribe({ showNotification }) {
       // Fallback update in case WebSocket is slow/fails
       setIsSubscribed(true);
       setSubscribedEmail(email);
+      localStorage.setItem(SUBSCRIPTION_CACHE_KEY, email);
       setIsOtpModalOpen(false);
       
     } catch (error) {
@@ -158,6 +158,7 @@ export default function NewsletterSubscribe({ showNotification }) {
       setIsSubscribed(false);
       setSubscribedEmail('');
       setEmail('');
+      localStorage.removeItem(SUBSCRIPTION_CACHE_KEY);
       showNotification('Hủy đăng ký nhận thông báo thành công!', 'success');
     } catch (error) {
       console.error('Failed to unsubscribe:', error);
@@ -188,82 +189,80 @@ export default function NewsletterSubscribe({ showNotification }) {
           </p>
         </div>
 
-        {!isCheckingStatus && (
-          <div className="w-full max-w-lg mx-auto flex flex-col gap-4">
-            <AnimatePresence>
-              {authError && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10, height: 0 }}
-                  animate={{ opacity: 1, y: 0, height: 'auto' }}
-                  exit={{ opacity: 0, y: -10, height: 0 }}
-                  className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 p-3 rounded-xl text-sm font-medium text-center shadow-sm overflow-hidden"
-                >
-                  Vui lòng đăng nhập để có thể đăng ký nhận thông báo sự kiện!
-                </motion.div>
-              )}
-            </AnimatePresence>
+        <div className="w-full max-w-lg mx-auto flex flex-col gap-4">
+          <AnimatePresence>
+            {authError && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -10, height: 0 }}
+                className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50 p-3 rounded-xl text-sm font-medium text-center shadow-sm overflow-hidden"
+              >
+                Vui lòng đăng nhập để có thể đăng ký nhận thông báo sự kiện!
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-            <AnimatePresence mode="wait">
-              {isSubscribed ? (
-                <motion.div 
-                  key="subscribed"
-                  initial={{ opacity: 0, scale: 0.95 }} 
-                  animate={{ opacity: 1, scale: 1 }} 
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="flex items-center justify-between p-4 bg-green-50/80 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl shadow-sm w-full"
-                >
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <CheckCircle2 className="text-green-600 dark:text-green-400 flex-shrink-0" size={24} />
-                    <div className="flex flex-col truncate">
-                      <span className="text-sm text-green-800/70 dark:text-green-400/70 font-medium">Đang nhận thông báo qua:</span>
-                      <span className="font-semibold text-green-900 dark:text-green-300 truncate">{subscribedEmail}</span>
-                    </div>
+          <AnimatePresence mode="wait">
+            {isSubscribed ? (
+              <motion.div
+                key="subscribed"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="flex items-center justify-between p-4 bg-green-50/80 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-2xl shadow-sm w-full"
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <CheckCircle2 className="text-green-600 dark:text-green-400 flex-shrink-0" size={24} />
+                  <div className="flex flex-col truncate">
+                    <span className="text-sm text-green-800/70 dark:text-green-400/70 font-medium">Đang nhận thông báo qua:</span>
+                    <span className="font-semibold text-green-900 dark:text-green-300 truncate">{subscribedEmail}</span>
                   </div>
-                  <button
-                    onClick={handleUnsubscribe}
-                    disabled={isUnsubscribing}
-                    title="Hủy đăng ký"
-                    className="flex-shrink-0 p-3 text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl transition-all disabled:opacity-50"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.form 
-                  key="subscribeForm"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  onSubmit={handleSubscribe} 
-                  className="flex w-full flex-col gap-3 sm:relative sm:flex-row sm:items-center sm:gap-0"
+                </div>
+                <button
+                  onClick={handleUnsubscribe}
+                  disabled={isUnsubscribing}
+                  title="Hủy đăng ký"
+                  className="flex-shrink-0 p-3 text-red-500 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-xl transition-all disabled:opacity-50"
                 >
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Nhập địa chỉ email của bạn..."
-                    required
-                    className="w-full min-w-0 px-5 py-4 sm:pl-6 sm:pr-32 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
-                  />
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3.5 font-medium text-white shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] transition-all hover:from-blue-500 hover:to-indigo-500 hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] disabled:opacity-70 sm:absolute sm:right-2 sm:top-2 sm:bottom-2 sm:w-auto sm:py-0 group"
-                  >
-                    {isSubmitting ? (
-                      <span className="animate-pulse">Đang gửi...</span>
-                    ) : (
-                      <>
-                        <span>Gửi</span>
-                        <Send size={16} className="group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </button>
-                </motion.form>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
+                  <Trash2 size={20} />
+                </button>
+              </motion.div>
+            ) : (
+              <motion.form
+                key="subscribeForm"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                onSubmit={handleSubscribe}
+                className="flex w-full flex-col gap-3 sm:relative sm:flex-row sm:items-center sm:gap-0"
+              >
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Nhập địa chỉ email của bạn..."
+                  required
+                  className="w-full min-w-0 px-5 py-4 sm:pl-6 sm:pr-32 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
+                />
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3.5 font-medium text-white shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] transition-all hover:from-blue-500 hover:to-indigo-500 hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] disabled:opacity-70 sm:absolute sm:right-2 sm:top-2 sm:bottom-2 sm:w-auto sm:py-0 group"
+                >
+                  {isSubmitting ? (
+                    <span className="animate-pulse">Đang gửi...</span>
+                  ) : (
+                    <>
+                      <span>Gửi</span>
+                      <Send size={16} className="group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+              </motion.form>
+            )}
+          </AnimatePresence>
+        </div>
         
       </div>
 
