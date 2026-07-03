@@ -2,13 +2,34 @@ import { useState, useEffect } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
+const WS_ENDPOINT = "/ws";
+
+const trimTrailingSlash = (value) => value.replace(/\/+$/, "");
+
+const buildSockJsUrl = () => {
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+  const wsBaseUrl = import.meta.env.VITE_WS_BASE_URL || apiBaseUrl;
+  const rawUrl = trimTrailingSlash(wsBaseUrl);
+  const urlWithEndpoint = rawUrl.endsWith(WS_ENDPOINT) ? rawUrl : `${rawUrl}${WS_ENDPOINT}`;
+
+  try {
+    const url = new URL(urlWithEndpoint);
+    if (window.location.protocol === "https:" && url.protocol === "http:") {
+      url.protocol = "https:";
+    }
+    return trimTrailingSlash(url.toString());
+  } catch {
+    return urlWithEndpoint;
+  }
+};
+
 export function useWebSocket() {
   const [stompClient, setStompClient] = useState(null);
   const [messages, setMessages] = useState([]);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const socket = new SockJS("http://localhost:8080/ws");
+    const socket = new SockJS(buildSockJsUrl());
     const client = new Client({
       webSocketFactory: () => socket,
       onConnect: () => {
