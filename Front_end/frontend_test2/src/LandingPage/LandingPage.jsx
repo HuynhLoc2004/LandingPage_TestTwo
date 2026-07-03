@@ -286,9 +286,7 @@ export default function LandingPage({
   }, [showNotification, setAuthMode, setIsLoginOpen]);
 
   useEffect(() => {
-    const canLoadVideo =
-      window.matchMedia("(min-width: 768px)").matches &&
-      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const canLoadVideo = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     if (!canLoadVideo) {
       return;
@@ -296,7 +294,7 @@ export default function LandingPage({
 
     const timer = window.setTimeout(() => {
       setShouldLoadHeroVideo(true);
-    }, 2500);
+    }, 1200);
 
     return () => window.clearTimeout(timer);
   }, []);
@@ -845,9 +843,17 @@ export default function LandingPage({
           )}
         >
           {/* Background Video Layer */}
-          <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none opacity-40">
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:72px_72px] opacity-25" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.12),transparent_30%),radial-gradient(circle_at_80%_15%,rgba(34,197,94,0.08),transparent_22%),radial-gradient(circle_at_70%_80%,rgba(16,185,129,0.08),transparent_20%)]" />
+          <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden select-none">
+            <img
+              src={heroImage}
+              alt=""
+              width="1400"
+              height="650"
+              loading="eager"
+              decoding="async"
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover opacity-35 blur-[1px] scale-105"
+            />
             {shouldLoadHeroVideo && (
               <video
                 src="https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260505_101331_74f9b798-3f00-4e86-8a01-377aa16ffeaa.mp4"
@@ -858,9 +864,18 @@ export default function LandingPage({
                 preload="none"
                 poster={heroImage}
                 aria-hidden="true"
-                className="w-full h-full object-cover scale-105"
+                className="absolute inset-0 h-full w-full object-cover opacity-55 scale-105"
               />
             )}
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:72px_72px] opacity-25" />
+            <div
+              className={twMerge(
+                "absolute inset-0",
+                darkMode
+                  ? "bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.18),transparent_30%),radial-gradient(circle_at_80%_15%,rgba(34,197,94,0.10),transparent_22%),linear-gradient(90deg,rgba(3,7,18,0.88),rgba(3,7,18,0.46),rgba(3,7,18,0.72))]"
+                  : "bg-[radial-gradient(circle_at_20%_20%,rgba(16,185,129,0.12),transparent_30%),linear-gradient(90deg,rgba(255,255,255,0.92),rgba(255,255,255,0.62),rgba(255,255,255,0.76))]",
+              )}
+            />
           </div>
 
           {/* Left Text Box */}
