@@ -235,7 +235,7 @@ export default function NewsletterSubscribe({ showNotification }) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   onSubmit={handleSubscribe} 
-                  className="relative flex items-center w-full"
+                  className="flex w-full flex-col gap-3 sm:relative sm:flex-row sm:items-center sm:gap-0"
                 >
                   <input
                     type="email"
@@ -243,12 +243,12 @@ export default function NewsletterSubscribe({ showNotification }) {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Nhập địa chỉ email của bạn..."
                     required
-                    className="w-full pl-6 pr-32 py-4 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
+                    className="w-full min-w-0 px-5 py-4 sm:pl-6 sm:pr-32 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
                   />
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="absolute right-2 top-2 bottom-2 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium rounded-xl transition-all shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] disabled:opacity-70 flex items-center gap-2 group"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3.5 font-medium text-white shadow-[0_4px_14px_0_rgba(99,102,241,0.39)] transition-all hover:from-blue-500 hover:to-indigo-500 hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] disabled:opacity-70 sm:absolute sm:right-2 sm:top-2 sm:bottom-2 sm:w-auto sm:py-0 group"
                   >
                     {isSubmitting ? (
                       <span className="animate-pulse">Đang gửi...</span>

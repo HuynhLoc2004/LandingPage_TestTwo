@@ -70,14 +70,16 @@ export default function OtpModal({ isOpen, onClose, onVerify, email, isVerifying
             animate={{ scale: 1, y: 0, opacity: 1, rotateX: 0 }}
             exit={{ scale: 0.9, y: 20, opacity: 0, rotateX: -10 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className="relative w-full max-w-md perspective-1000"
+            className="relative w-full max-w-md min-w-0 perspective-1000"
           >
             {/* 3D Container with Glassmorphism and dynamic shadows for Light/Dark mode */}
-            <div className="relative overflow-hidden rounded-3xl bg-white/90 dark:bg-slate-900/90 p-8 shadow-[0_20px_50px_rgba(0,0,0,0.1),_0_2px_10px_rgba(0,0,0,0.05),_inset_0_1px_0_rgba(255,255,255,0.6)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5),_0_2px_10px_rgba(0,0,0,0.3),_inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl border border-white/20 dark:border-slate-700/50 transform-gpu">
+            <div className="relative overflow-hidden rounded-3xl bg-white/90 dark:bg-slate-900/90 p-5 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.1),_0_2px_10px_rgba(0,0,0,0.05),_inset_0_1px_0_rgba(255,255,255,0.6)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5),_0_2px_10px_rgba(0,0,0,0.3),_inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-xl border border-white/20 dark:border-slate-700/50 transform-gpu">
               
               <button
+                type="button"
                 onClick={onClose}
                 className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                aria-label="Đóng hộp xác thực OTP"
               >
                 <X size={20} />
               </button>
@@ -94,7 +96,7 @@ export default function OtpModal({ isOpen, onClose, onVerify, email, isVerifying
               </div>
 
               <form onSubmit={handleSubmit}>
-                <div className="flex justify-between gap-2 mb-6">
+                <div className="grid grid-cols-6 gap-1.5 sm:gap-2 mb-6">
                   {otp.map((digit, index) => (
                     <input
                       key={index}
@@ -105,7 +107,7 @@ export default function OtpModal({ isOpen, onClose, onVerify, email, isVerifying
                       value={digit}
                       onChange={(e) => handleChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
-                      className="w-12 h-14 text-center text-2xl font-bold rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-transparent focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 dark:focus:ring-blue-500/30 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] outline-none"
+                      className="h-12 min-w-0 text-center text-xl sm:h-14 sm:text-2xl font-bold rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-2 border-transparent focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 dark:focus:ring-blue-500/30 transition-all shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_2px_4px_rgba(0,0,0,0.2)] outline-none"
                     />
                   ))}
                 </div>
@@ -135,7 +137,7 @@ export default function OtpModal({ isOpen, onClose, onVerify, email, isVerifying
               
               <p className="text-center mt-6 text-sm text-slate-500 dark:text-slate-400">
                 Chưa nhận được mã?{' '}
-                <button className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                <button type="button" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
                   Gửi lại
                 </button>
               </p>

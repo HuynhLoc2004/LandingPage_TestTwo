@@ -701,14 +701,14 @@ export default function LandingPage({
         <motion.nav
           style={{ x: headerX, y: headerY }}
           className={twMerge(
-            "flex items-center justify-between px-4 sm:px-6 py-3 rounded-full border shadow-lg backdrop-blur-2xl transition-all will-change-transform",
+            "flex min-w-0 items-center justify-between gap-2 px-3 sm:px-6 py-3 rounded-full border shadow-lg backdrop-blur-2xl transition-all will-change-transform",
             darkMode
               ? "bg-slate-900/80 border-slate-800 shadow-black/20"
               : "bg-white/90 border-slate-200/50 shadow-slate-100",
           )}
         >
           {/* Logo Placeholder */}
-          <div className="flex items-center gap-2 font-display font-semibold text-lg tracking-tight">
+          <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 font-display font-semibold text-base sm:text-lg tracking-tight">
             <span className="text-xl">✦</span> EpochLab
           </div>
 
@@ -729,7 +729,7 @@ export default function LandingPage({
           </div>
 
           {/* Action Triggers */}
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             {/* Dark Mode Switch Button */}
             <button
               onClick={toggleDarkMode}
@@ -790,7 +790,7 @@ export default function LandingPage({
                 }
               }}
               className={twMerge(
-                "cursor-pointer inline-flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-full transition-all border",
+                "cursor-pointer inline-flex items-center gap-2 text-xs font-semibold px-3 sm:px-4 py-2 rounded-full transition-all border",
                 darkMode
                   ? "bg-white text-slate-900 border-white hover:bg-emerald-50"
                   : "bg-slate-900 text-white border-slate-900 hover:bg-slate-800",
@@ -800,12 +800,12 @@ export default function LandingPage({
               {isLoggedIn ? (
                 <>
                   <LogOut className="w-4 h-4" />
-                  Đăng xuất
+                  <span className="hidden min-[390px]:inline">Đăng xuất</span>
                 </>
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
-                  Đăng nhập
+                  <span className="hidden min-[390px]:inline">Đăng nhập</span>
                 </>
               )}
             </button>
@@ -820,7 +820,7 @@ export default function LandingPage({
       >
         <div
           className={twMerge(
-            "relative w-full rounded-[28px] sm:rounded-[48px] border overflow-hidden min-h-[650px] flex flex-col md:flex-row items-center justify-between p-5 sm:p-8 md:p-16 transition-all",
+            "relative w-full rounded-[28px] sm:rounded-[48px] border overflow-hidden min-h-[560px] sm:min-h-[650px] flex flex-col md:flex-row items-center justify-between p-5 sm:p-8 md:p-16 transition-all",
             darkMode
               ? "bg-[linear-gradient(135deg,rgba(8,15,12,0.84),rgba(6,11,14,0.7))] border-emerald-500/15 shadow-[0_0_80px_rgba(16,185,129,0.08)]"
               : "bg-[linear-gradient(135deg,rgba(255,255,255,0.9),rgba(247,250,248,0.82))] border-emerald-900/10 shadow-sm",
@@ -855,7 +855,7 @@ export default function LandingPage({
             >
               ✦ Enterprise Intelligent Infrastructure
             </span>
-            <h1 id="hero-heading" className="font-display text-[42px] md:text-[58px] font-medium leading-[1.05] tracking-tight mb-4">
+            <h1 id="hero-heading" className="font-display text-[34px] min-[390px]:text-[42px] md:text-[58px] font-medium leading-[1.05] tracking-tight mb-4">
               Foundation of the
               <br />
               new digital epoch

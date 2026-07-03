@@ -7,13 +7,22 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
   padding: 0;
   font-family: var(--font-sans);
+  overflow-x: hidden;
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
 }

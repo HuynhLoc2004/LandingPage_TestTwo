@@ -1,0 +1,17 @@
+{
+  "name": "LandingPage TestTwo",
+  "short_name": "TestTwo",
+  "description": "Smart commerce landing page with AI chat, cart, favorites, and email OTP.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#04110d",
+  "theme_color": "#04110d",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
