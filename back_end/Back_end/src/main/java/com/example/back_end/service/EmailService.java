@@ -1,5 +1,7 @@
 package com.example.back_end.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +12,15 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.security.SecureRandom;
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,10 +34,26 @@ public class EmailService {
     @Autowired
     private JavaMailSender emailSender;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
     private final ConcurrentHashMap<String, String> otpCache = new ConcurrentHashMap<>();
+
+    @Value("${MAIL_PROVIDER:smtp}")
+    private String mailProvider;
 
     @Value("${MAIL_FROM:${spring.mail.username}}")
     private String fromEmail;
+
+    @Value("${RESEND_API_KEY:}")
+    private String resendApiKey;
+
+    @Value("${RESEND_API_URL:https://api.resend.com/emails}")
+    private String resendApiUrl;
 
     @Value("${spring.mail.host:smtp.gmail.com}")
     private String mailHost;
@@ -55,11 +81,76 @@ public class EmailService {
     }
 
     public void sendSimpleMessage(String to, String subject, String text) {
+        if ("resend".equalsIgnoreCase(mailProvider)) {
+            sendWithResend(to, subject, text);
+            return;
+        }
+
         try {
             emailSender.send(createMessage(to, subject, text));
         } catch (MailException exception) {
             logger.warn("Primary email send failed on {}:{}; trying Gmail fallback transport", mailHost, mailPort, exception);
             sendWithFallbackTransport(to, subject, text, exception);
+        }
+    }
+
+    private void sendWithResend(String to, String subject, String text) {
+        if (resendApiKey == null || resendApiKey.isBlank()) {
+            logger.error("RESEND_API_KEY is missing");
+            throw new EmailDeliveryException(
+                    "RESEND_API_KEY_MISSING",
+                    "Email service is not configured. Please try again later.",
+                    null
+            );
+        }
+
+        try {
+            String requestBody = objectMapper.writeValueAsString(Map.of(
+                    "from", fromEmail,
+                    "to", List.of(to),
+                    "subject", subject,
+                    "text", text
+            ));
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(resendApiUrl))
+                    .timeout(Duration.ofSeconds(15))
+                    .header("Authorization", "Bearer " + resendApiKey)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                logger.error("Resend email failed with status {} and body {}", response.statusCode(), response.body());
+                throw new EmailDeliveryException(
+                        "RESEND_SEND_FAILED",
+                        "Email service is temporarily unavailable. Please try again later.",
+                        null
+                );
+            }
+        } catch (JsonProcessingException exception) {
+            logger.error("Failed to build Resend email request", exception);
+            throw new EmailDeliveryException(
+                    "RESEND_REQUEST_FAILED",
+                    "Email service is temporarily unavailable. Please try again later.",
+                    exception
+            );
+        } catch (IOException exception) {
+            logger.error("Failed to connect to Resend", exception);
+            throw new EmailDeliveryException(
+                    "RESEND_CONNECT_FAILED",
+                    "Email service is temporarily unavailable. Please try again later.",
+                    exception
+            );
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            logger.error("Interrupted while sending email with Resend", exception);
+            throw new EmailDeliveryException(
+                    "RESEND_SEND_INTERRUPTED",
+                    "Email service is temporarily unavailable. Please try again later.",
+                    exception
+            );
         }
     }
 
