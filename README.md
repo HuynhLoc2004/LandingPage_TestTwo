@@ -165,6 +165,10 @@ JWT_REFRESH_TOKEN_EXPIRATION=7d
 
 FRONTEND_URL=http://localhost:5173
 
+KEEP_ALIVE_ENABLED=false
+KEEP_ALIVE_URL=https://landingpage-test2-deploy-backend.onrender.com/api/keep-alive
+KEEP_ALIVE_FIXED_DELAY_MS=240000
+
 MAIL_PROVIDER=resend
 MAIL_FROM=onboarding@resend.dev
 RESEND_API_KEY=...
@@ -189,6 +193,7 @@ Notes:
 - For Render, set the same backend variables in the Render Environment tab.
 - Do not wrap `SPRING_DATASOURCE_URL` in quotes on Render.
 - `FRONTEND_URL` should be the deployed Vercel URL without a trailing slash.
+- To reduce Render free-tier sleeping, set `KEEP_ALIVE_ENABLED=true` and point `KEEP_ALIVE_URL` to the deployed `/api/keep-alive` URL. `KEEP_ALIVE_FIXED_DELAY_MS=240000` pings every 4 minutes.
 - `MAIL_PROVIDER=resend` avoids SMTP timeout issues on free hosting platforms that restrict SMTP connections.
 - Rotate any API keys, database passwords, and JWT secrets that have ever been shared publicly.
 
