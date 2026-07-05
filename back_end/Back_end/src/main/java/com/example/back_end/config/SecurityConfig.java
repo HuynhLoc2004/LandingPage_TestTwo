@@ -55,8 +55,8 @@ public class SecurityConfig {
         configuration.setAllowedOriginPatterns(List.of(
                 normalizeOrigin(frontendUrl),
                 "https://*.vercel.app",
-                "http://localhost:5173",
-                "http://localhost:5174"
+                "http://localhost:*",
+                "http://127.0.0.1:*"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Accept"));
